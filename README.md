@@ -1,6 +1,8 @@
 
 # go-stardog
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/noahgorstein/go-stardog)](https://goreportcard.com/report/github.com/noahgorstein/go-stardog)
+
 go-stardog is a Go client library for interacting with a Stardog server.
 
 ## Example
