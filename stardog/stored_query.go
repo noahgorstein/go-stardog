@@ -8,6 +8,8 @@ import (
 	"net/http"
 )
 
+type StoredQueryService service
+
 func NewStoredQuery(name string, description string, database string,
 	query string, creator string, reasoning bool, shared bool) *StoredQuery {
 	return &StoredQuery{
@@ -40,9 +42,9 @@ type GetStoredQueries struct {
 // GetStoredQueries lists the stored queries that are accessible to the authenticated client
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Queries/operation/listStoredQueries
-func (client *Client) GetStoredQueries(ctx context.Context) (*GetStoredQueries, error) {
+func (s *StoredQueryService) GetStoredQueries(ctx context.Context) (*[]StoredQuery, error) {
 
-	url := fmt.Sprintf("%s/admin/queries/stored", client.BaseURL)
+	url := fmt.Sprintf("%s/admin/queries/stored", s.client.BaseURL)
 
 	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -50,18 +52,18 @@ func (client *Client) GetStoredQueries(ctx context.Context) (*GetStoredQueries, 
 	}
 
 	var storedQueries GetStoredQueries
-	if err := client.sendRequest(request, &storedQueries); err != nil {
+	if err := s.client.sendRequest(request, &storedQueries); err != nil {
 		return nil, err
 	}
 
-	return &storedQueries, nil
+	return storedQueries.Queries, nil
 }
 
 // Add stored query, overwriting if a query with that name already exists
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Queries/operation/updateStoredQuery
-func (client *Client) UpdateStoredQuery(ctx context.Context, sq StoredQuery) (bool, error) {
-	url := fmt.Sprintf("%s/admin/queries/stored", client.BaseURL)
+func (s *StoredQueryService) CreateOrUpdateStoredQuery(ctx context.Context, sq StoredQuery) (bool, error) {
+	url := fmt.Sprintf("%s/admin/queries/stored", s.client.BaseURL)
 
 	requestBody, _ := json.Marshal(sq)
 	payloadBuf := bytes.NewBuffer(requestBody)
@@ -72,7 +74,7 @@ func (client *Client) UpdateStoredQuery(ctx context.Context, sq StoredQuery) (bo
 	}
 
 	var v struct{}
-	if err := client.sendRequest(request, &v); err != nil {
+	if err := s.client.sendRequest(request, &v); err != nil {
 		return false, err
 	}
 

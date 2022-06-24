@@ -18,17 +18,34 @@ type Client struct {
 	Username   string
 	password   string
 	BaseURL    string
+
+	common service
+
+	//Services for talking to different parts of the Stardog API
+	Security    *SecurityService
+	StoredQuery *StoredQueryService
+	ServerAdmin *ServerAdminService
 }
 
 //  NewClient returns a new Stardog API client.
 func NewClient(baseURL, username, password string) *Client {
 
-	return &Client{
+	c := &Client{
 		Username:   username,
 		password:   password,
 		BaseURL:    StardogDefaultURL,
 		HTTPClient: &http.Client{},
 	}
+	c.common.client = c
+	c.Security = (*SecurityService)(&c.common)
+	c.StoredQuery = (*StoredQueryService)(&c.common)
+	c.ServerAdmin = (*ServerAdminService)(&c.common)
+
+	return c
+}
+
+type service struct {
+	client *Client
 }
 
 type errorResponse struct {
