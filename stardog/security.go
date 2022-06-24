@@ -46,7 +46,7 @@ type UserDetails struct {
 	} `json:"permissions"`
 }
 
-type UserPermissionsResponse struct {
+type userPermissionsResponse struct {
 	Permissions []Permission `json:"permissions"`
 }
 
@@ -61,7 +61,26 @@ func (s *SecurityService) GetUserPermissions(ctx context.Context, username strin
 		return nil, err
 	}
 
-	var userPermissionsResponse UserPermissionsResponse
+	var userPermissionsResponse userPermissionsResponse
+	if err := s.client.sendRequest(request, &userPermissionsResponse); err != nil {
+		return nil, err
+	}
+
+	return userPermissionsResponse.Permissions, nil
+}
+
+// Get all permissions assigned to a given user as well as those granted by assigned roles
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/getEffectiveUserPermissions
+func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, username string) ([]Permission, error) {
+	url := fmt.Sprintf("%s/admin/permissions/effective/user/%s", s.client.BaseURL, username)
+
+	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var userPermissionsResponse userPermissionsResponse
 	if err := s.client.sendRequest(request, &userPermissionsResponse); err != nil {
 		return nil, err
 	}
@@ -92,6 +111,8 @@ type isSuperUserResponse struct {
 	Superuser bool `json:"superuser"`
 }
 
+// Is specified user a superuser
+//
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/isSuper
 func (s *SecurityService) IsSuperuser(ctx context.Context, username string) (bool, error) {
 	url := fmt.Sprintf("%s/admin/users/%s/superuser", s.client.BaseURL, username)
@@ -154,6 +175,7 @@ func (s *SecurityService) CreateUser(ctx context.Context, username string, passw
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("Content-type", "application/json")
 
 	var res struct{}
 	if err := s.client.sendRequest(req, &res); err != nil {
@@ -195,6 +217,7 @@ func (s *SecurityService) ChangeUserPassword(ctx context.Context, username strin
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("Content-type", "application/json")
 
 	var res struct{}
 	if err := s.client.sendRequest(req, &res); err != nil {
@@ -220,6 +243,7 @@ func (s *SecurityService) SetEnabled(ctx context.Context, username string, enabl
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("Content-type", "application/json")
 
 	var res struct{}
 	if err := s.client.sendRequest(req, &res); err != nil {
@@ -238,7 +262,7 @@ func (s *SecurityService) ListRolesAssignedToUser(ctx context.Context, username 
 		return nil, err
 	}
 
-	var listRolesResponse ListRolesResponse
+	var listRolesResponse listRolesResponse
 	if err := s.client.sendRequest(request, &listRolesResponse); err != nil {
 		return nil, err
 	}
@@ -247,7 +271,7 @@ func (s *SecurityService) ListRolesAssignedToUser(ctx context.Context, username 
 
 }
 
-type ListRolesResponse struct {
+type listRolesResponse struct {
 	Roles []string `json:"roles"`
 }
 
@@ -261,7 +285,7 @@ func (s *SecurityService) ListRoles(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	var listRolesResponse ListRolesResponse
+	var listRolesResponse listRolesResponse
 	if err := s.client.sendRequest(request, &listRolesResponse); err != nil {
 		return nil, err
 	}
@@ -283,6 +307,7 @@ func (s *SecurityService) CreateRole(ctx context.Context, rolename string) (bool
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("Content-type", "application/json")
 
 	var res struct{}
 	if err := s.client.sendRequest(req, &res); err != nil {
@@ -291,21 +316,21 @@ func (s *SecurityService) CreateRole(ctx context.Context, rolename string) (bool
 	return true, nil
 }
 
-type RolePermissionsResponse struct {
+type rolePermissionsResponse struct {
 	Permissions []Permission `json:"permissions"`
 }
 
 // Get all permissions granted to a given role
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/getRolePermissions
-func (s *SecurityService) RolePermissions(ctx context.Context, rolename string) ([]Permission, error) {
+func (s *SecurityService) GetRolePermissions(ctx context.Context, rolename string) ([]Permission, error) {
 	url := fmt.Sprintf("%s/admin/permissions/role/%s", s.client.BaseURL, rolename)
 	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var rolePermissionsResponse RolePermissionsResponse
+	var rolePermissionsResponse rolePermissionsResponse
 	if err := s.client.sendRequest(request, &rolePermissionsResponse); err != nil {
 		return nil, err
 	}
@@ -325,6 +350,7 @@ func (s *SecurityService) GrantRolePermission(ctx context.Context, rolename stri
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("Content-type", "application/json")
 
 	var res struct{}
 	if err := s.client.sendRequest(req, &res); err != nil {
@@ -345,6 +371,7 @@ func (s *SecurityService) RevokeRolePermission(ctx context.Context, rolename str
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("Content-type", "application/json")
 
 	var res struct{}
 	if err := s.client.sendRequest(req, &res); err != nil {
@@ -417,6 +444,7 @@ func (s *SecurityService) GrantUserPermission(ctx context.Context, username stri
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("Content-type", "application/json")
 
 	var res struct{}
 	if err := s.client.sendRequest(req, &res); err != nil {
@@ -437,6 +465,7 @@ func (s *SecurityService) RevokeUserPermission(ctx context.Context, username str
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("Content-type", "application/json")
 
 	var res struct{}
 	if err := s.client.sendRequest(req, &res); err != nil {
@@ -460,6 +489,7 @@ func (s *SecurityService) AssignRoleToUser(ctx context.Context, username string,
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("Content-type", "application/json")
 
 	var res struct{}
 	if err := s.client.sendRequest(req, &res); err != nil {
@@ -477,6 +507,7 @@ func (s *SecurityService) RemoveRoleFromUser(ctx context.Context, username strin
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("Content-type", "application/json")
 
 	var res struct{}
 	if err := s.client.sendRequest(req, &res); err != nil {

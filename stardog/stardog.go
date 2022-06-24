@@ -8,10 +8,6 @@ import (
 	"net/http"
 )
 
-const (
-	StardogDefaultURL = "http://localhost:5820"
-)
-
 // Client manages communications with the Stardog API
 type Client struct {
 	HTTPClient *http.Client
@@ -27,13 +23,13 @@ type Client struct {
 	ServerAdmin *ServerAdminService
 }
 
-//  NewClient returns a new Stardog API client.
+//  NewClient returns a new Stardog API basicauth client.
 func NewClient(baseURL, username, password string) *Client {
 
 	c := &Client{
 		Username:   username,
 		password:   password,
-		BaseURL:    StardogDefaultURL,
+		BaseURL:    baseURL,
 		HTTPClient: &http.Client{},
 	}
 	c.common.client = c
@@ -54,7 +50,6 @@ type errorResponse struct {
 }
 
 func (client *Client) sendRequest(request *http.Request, v interface{}) error {
-	request.Header.Add("Content-type", "application/json")
 	request.Header.Add("Accept", "application/json")
 	request.SetBasicAuth(client.Username, client.password)
 

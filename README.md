@@ -3,24 +3,18 @@
 
 go-stardog is a Go client library for interacting with a Stardog server.
 
-## Example
+## Usage
 
-Basic example of creating a Stardog client and listing the roles in Stardog.
+Construct a new Stardog client, then use the various services on the client to access different parts of the Stardog API. For example:
 
 ```go
-import (
-	"context"
-	"fmt"
-
-	"github.com/noahgorstein/go-stardog/stardog"
-)
-
-func main() {
-	client := stardog.NewClient("http://localhost:5820", "admin", "admin")
-	roleList, _ := client.GetRoles(context.Background())
-	fmt.Println(roleList.Roles)
-}
+client := stardog.NewClient("http://localhost:5820", "username", "password")
+userPermissions, _ := client.Security.GetUserPermissions(context.Background(), "frodo")
 ```
+
+The services of a client divide the API into logical chunks and correspond to the structure of the Stardog API documentation at [https://stardog-union.github.io/http-docs/](https://stardog-union.github.io/http-docs/) .
+
+> NOTE: Using the context package, one can easily pass cancelation signals and deadlines to various services of the client for handling a request. In case there is no context available, then `context.Background()` can be used as a starting point.
 
 ## Notes
 
@@ -29,5 +23,5 @@ func main() {
 
 ## TODO
 
-- Create a wrapper over all Stardog HTTP endpoints
+- Implement a wrapper around the rest of the Stardog API.
 - Add tests

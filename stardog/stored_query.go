@@ -34,9 +34,9 @@ type StoredQuery struct {
 	Creator     string `json:"creator"`
 }
 
-// GetStoredQueries represents the response from the list stored queries endpoint
-type GetStoredQueries struct {
-	Queries *[]StoredQuery `json:"queries"`
+// getStoredQueriesResponse represents the response from the list stored queries endpoint
+type getStoredQueriesResponse struct {
+	StoredQueries *[]StoredQuery `json:"queries"`
 }
 
 // GetStoredQueries lists the stored queries that are accessible to the authenticated client
@@ -51,12 +51,12 @@ func (s *StoredQueryService) GetStoredQueries(ctx context.Context) (*[]StoredQue
 		return nil, err
 	}
 
-	var storedQueries GetStoredQueries
-	if err := s.client.sendRequest(request, &storedQueries); err != nil {
+	var storedQueriesResponse getStoredQueriesResponse
+	if err := s.client.sendRequest(request, &storedQueriesResponse); err != nil {
 		return nil, err
 	}
 
-	return storedQueries.Queries, nil
+	return storedQueriesResponse.StoredQueries, nil
 }
 
 // Add stored query, overwriting if a query with that name already exists
@@ -72,6 +72,8 @@ func (s *StoredQueryService) CreateOrUpdateStoredQuery(ctx context.Context, sq S
 	if err != nil {
 		return false, err
 	}
+
+	request.Header.Add("Content-type", "application/json")
 
 	var v struct{}
 	if err := s.client.sendRequest(request, &v); err != nil {
