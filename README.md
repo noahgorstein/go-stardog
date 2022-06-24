@@ -25,5 +25,5 @@ The services of a client divide the API into logical chunks and mostly correspon
 
 ## TODO
 
-- Implement a wrapper around the rest of the Stardog API.
+- Create a wrapper over all Stardog HTTP endpoints
 - Add tests
