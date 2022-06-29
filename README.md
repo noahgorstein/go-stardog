@@ -3,6 +3,8 @@
 
 ![go-stardog](https://user-images.githubusercontent.com/23270779/175647530-ae5a8681-87a6-471d-a03a-4c700610483d.jpg)
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/noahgorstein/go-stardog.svg)](https://pkg.go.dev/github.com/noahgorstein/go-stardog) [![Go Report Card](https://goreportcard.com/badge/github.com/noahgorstein/go-stardog)](https://goreportcard.com/report/github.com/noahgorstein/go-stardog)
+
 go-stardog is a Go client library for interacting with a Stardog server.
 
 ## Usage
