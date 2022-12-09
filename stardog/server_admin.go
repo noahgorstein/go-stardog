@@ -3,90 +3,91 @@ package stardog
 import (
 	"context"
 	"fmt"
-	"net/http"
 )
 
 type ServerAdminService service
 
+// Represents a Stardog server process' progress
+type ProcessProgress struct {
+	Max     int    `json:"max"`
+	Current int    `json:"current"`
+	Stage   string `json:"stage"`
+}
+
+// Represents a Stardog server process
+type Process struct {
+	Type      string          `json:"type"`
+	KernelID  string          `json:"kernelId"`
+	ID        string          `json:"id"`
+	Db        string          `json:"db"`
+	User      string          `json:"user"`
+	StartTime int64           `json:"startTime"`
+	Status    string          `json:"status"`
+	Progress  ProcessProgress `json:"progress"`
+}
+
 // Determine whether the Stardog server is running
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Server-Admin/operation/aliveCheck
-func (s *ServerAdminService) Alive(ctx context.Context) (bool, error) {
-	url := fmt.Sprintf("%s/admin/alive", s.client.BaseURL)
-
-	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+func (s *ServerAdminService) IsAlive(ctx context.Context) (*bool, *Response, error) {
+	url := "admin/alive"
+	request, err := s.client.NewRequest("GET", url, nil, nil)
 	if err != nil {
-		return false, err
+		return nil, nil, err
 	}
-
-	var b struct{}
-	if err := s.client.sendRequest(request, &b); err != nil {
-		return false, err
-	}
-
-	return true, nil
+	resp, err := s.client.Do(ctx, request, nil)
+	isAlive, err := parseBoolResponse(err)
+	return &isAlive, resp, err
 }
-
-type Process struct {
-	Type      string `json:"type"`
-	KernelID  string `json:"kernelId"`
-	ID        string `json:"id"`
-	Db        string `json:"db"`
-	User      string `json:"user"`
-	StartTime int64  `json:"startTime"`
-	Status    string `json:"status"`
-	Progress  struct {
-		Max     int    `json:"max"`
-		Current int    `json:"current"`
-		Stage   string `json:"stage"`
-	} `json:"progress"`
-}
-
-type Processes []Process
 
 // Get all server processes
-func (s *ServerAdminService) GetProcesses(ctx context.Context) (Processes, error) {
-
-	url := fmt.Sprintf("%s/admin/processes", s.client.BaseURL)
-
-	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Monitoring/operation/listProcesses
+func (s *ServerAdminService) GetProcesses(ctx context.Context) (*[]Process, *Response, error) {
+	url := "admin/processes"
+	headerOpts := requestHeaderOptions{
+		Accept: mediaTypeApplicationJson,
+	}
+	request, err := s.client.NewRequest("GET", url, &headerOpts, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	var pList Processes
-	if err := s.client.sendRequest(request, &pList); err != nil {
-		return nil, err
+
+	var getProcessesResponse []Process
+	resp, err := s.client.Do(ctx, request, &getProcessesResponse)
+	if err != nil {
+		return nil, resp, err
 	}
-	return pList, nil
+
+	return &getProcessesResponse, resp, nil
 }
 
 // Get details for a given process
-func (s *ServerAdminService) GetProcess(ctx context.Context, processId string) (*Process, error) {
-	url := fmt.Sprintf("%s/admin/processes/%s", s.client.BaseURL, processId)
-
-	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+func (s *ServerAdminService) GetProcess(ctx context.Context, processID string) (*Process, *Response, error) {
+	url := fmt.Sprintf("admin/processes/%s", processID)
+	headerOpts := requestHeaderOptions{
+		Accept: mediaTypeApplicationJson,
+	}
+	request, err := s.client.NewRequest("GET", url, &headerOpts, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
 	var ps Process
-	if err := s.client.sendRequest(request, &ps); err != nil {
-		return nil, err
+	resp, err := s.client.Do(ctx, request, &ps)
+	if err != nil {
+		return nil, resp, err
 	}
-	return &ps, nil
+
+	return &ps, resp, err
 }
 
 // Kill a given server process
-func (s *ServerAdminService) KillProcess(ctx context.Context, processId string) (bool, error) {
-	url := fmt.Sprintf("%s/admin/processes/%s", s.client.BaseURL, processId)
-
-	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
+func (s *ServerAdminService) KillProcess(ctx context.Context, processID string) (*Response, error) {
+	url := fmt.Sprintf("admin/processes/%s", processID)
+	request, err := s.client.NewRequest("DELETE", url, nil, nil)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-
-	var res struct{}
-	if err := s.client.sendRequest(req, &res); err != nil {
-		return false, err
-	}
-	return true, nil
+	return s.client.Do(ctx, request, nil)
 }

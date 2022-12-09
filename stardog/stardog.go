@@ -15,48 +15,35 @@ import (
 )
 
 const (
-	defaultBaseURL   = "http://localhost:5820/"
+	DefaultServerUrl = "http://localhost:5820/"
 	defaultUserAgent = "stardog-go"
 )
+
+var errNonNilContext = errors.New("context must be non-nil")
 
 // Client manages communications with the Stardog API
 type Client struct {
 	client    *http.Client
 	UserAgent string
 	Username  string
-	password  string
 	BaseURL   *url.URL
 
 	common service
 
 	//Services for talking to different parts of the Stardog API
 	Security    *SecurityService
-	StoredQuery *StoredQueryService
 	ServerAdmin *ServerAdminService
+	Transaction *TransactionService
 }
 
-func NewClient(httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = &http.Client{}
-	}
-	baseURL, _ := url.Parse(defaultBaseURL)
-	fmt.Println(baseURL.String())
-	fmt.Println(baseURL.Path)
-	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: defaultUserAgent}
-	c.common.client = c
-	c.Security = (*SecurityService)(&c.common)
-	c.StoredQuery = (*StoredQueryService)(&c.common)
-	c.ServerAdmin = (*ServerAdminService)(&c.common)
-	return c
+// Client returns the http.Client used by this Stardog client.
+func (c *Client) Client() *http.Client {
+	clientCopy := *c.client
+	return &clientCopy
 }
 
 type service struct {
 	client *Client
-}
-
-type errorResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
 }
 
 // BasicAuthTransport is an http.RoundTripper that authenticates all requests
@@ -70,83 +57,35 @@ type BasicAuthTransport struct {
 	Transport http.RoundTripper
 }
 
-// RoundTrip implements the RoundTripper interface.
-func (t *BasicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req2 := setCredentialsAsHeaders(req, t.Username, t.Password)
-	return t.transport().RoundTrip(req2)
+type requestHeaderOptions struct {
+	ContentType string
+	Accept      string
 }
 
-// Client returns an *http.Client that makes requests that are authenticated
-// using HTTP Basic Authentication.
-func (t *BasicAuthTransport) Client() *http.Client {
-	return &http.Client{Transport: t}
-}
-
-func (t *BasicAuthTransport) transport() http.RoundTripper {
-	if t.Transport != nil {
-		return t.Transport
+// NewClient returns a new Stardog API client. If a nil httpClient is provided, a new http.Client will be used.
+// To make authenticated API calls, provide an http.Client that will perform the authentication for you.
+func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
+	if httpClient == nil {
+		httpClient = &http.Client{}
 	}
-	return http.DefaultTransport
-}
 
-func setCredentialsAsHeaders(req *http.Request, username, password string) *http.Request {
-	// To set extra headers, we must make a copy of the Request so
-	// that we don't modify the Request we were given. This is required by the
-	// specification of http.RoundTripper.
-	//
-	// Since we are going to modify only req.Header here, we only need a deep copy
-	// of req.Header.
-	convertedRequest := new(http.Request)
-	*convertedRequest = *req
-	convertedRequest.Header = make(http.Header, len(req.Header))
-
-	for k, s := range req.Header {
-		convertedRequest.Header[k] = append([]string(nil), s...)
+	serverEndpoint, err := url.Parse(serverURL)
+	if err != nil {
+		return nil, err
 	}
-	convertedRequest.SetBasicAuth(username, password)
-	return convertedRequest
-}
-
-type BearerAuthTransport struct {
-	Bearer    string
-	Transport http.RoundTripper
-}
-
-func (t *BearerAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req2 := setBearerAuthHeaders(req, t.Bearer)
-	return t.transport().RoundTrip(req2)
-}
-
-func (t *BearerAuthTransport) transport() http.RoundTripper {
-	if t.Transport != nil {
-		return t.Transport
+	if !strings.HasSuffix(serverEndpoint.Path, "/") {
+		serverEndpoint.Path += "/"
 	}
-	return http.DefaultTransport
+
+	c := &Client{client: httpClient, BaseURL: serverEndpoint, UserAgent: defaultUserAgent}
+	c.common.client = c
+	c.Security = (*SecurityService)(&c.common)
+	c.ServerAdmin = (*ServerAdminService)(&c.common)
+	c.Transaction = (*TransactionService)(&c.common)
+	return c, nil
 }
 
-func (t *BearerAuthTransport) Client() *http.Client {
-	return &http.Client{Transport: t}
-}
-
-func setBearerAuthHeaders(req *http.Request, bearer string) *http.Request {
-	// To set extra headers, we must make a copy of the Request so
-	// that we don't modify the Request we were given. This is required by the
-	// specification of http.RoundTripper.
-	//
-	// Since we are going to modify only req.Header here, we only need a deep copy
-	// of req.Header.
-	convertedRequest := new(http.Request)
-	*convertedRequest = *req
-	convertedRequest.Header = make(http.Header, len(req.Header))
-
-	for k, s := range req.Header {
-		convertedRequest.Header[k] = append([]string(nil), s...)
-	}
-	convertedRequest.Header.Set("Authorization", fmt.Sprintf("bearer %s", bearer))
-	return convertedRequest
-}
-
-func (c *Client) NewRequest(method, urlStr, contentType string, acceptType string, body interface{}) (*http.Request, error) {
+func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
 	if !strings.HasSuffix(c.BaseURL.Path, "/") {
 		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.BaseURL)
 	}
@@ -172,12 +111,14 @@ func (c *Client) NewRequest(method, urlStr, contentType string, acceptType strin
 		return nil, err
 	}
 
-	if body != nil {
-		req.Header.Set("Content-Type", contentType)
+	if body != nil && headerOpts != nil {
+		req.Header.Set("Content-Type", headerOpts.ContentType)
 	}
 
-	if acceptType != "" {
-		req.Header.Set("Accept", "application/json")
+	if headerOpts != nil {
+		if headerOpts.Accept != "" {
+			req.Header.Set("Accept", headerOpts.Accept)
+		}
 	}
 
 	if c.UserAgent != "" {
@@ -189,36 +130,6 @@ func (c *Client) NewRequest(method, urlStr, contentType string, acceptType strin
 // Response is a Stardog API response. This wraps the standard http.Response
 type Response struct {
 	*http.Response
-}
-
-func (client *Client) sendRequest(request *http.Request, v interface{}) error {
-	request.Header.Add("Accept", "application/json")
-	request.SetBasicAuth(client.Username, client.password)
-
-	response, err := client.client.Do(request)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if !(response.StatusCode >= http.StatusOK && response.StatusCode <= http.StatusIMUsed) {
-
-		var errorResponse errorResponse
-		if err := json.NewDecoder(response.Body).Decode(&errorResponse); err != nil {
-			return errors.New(errorResponse.Message)
-		}
-		return fmt.Errorf("unknown error, status code: %d", response.StatusCode)
-	}
-
-	fullResponse := v
-	if err = json.NewDecoder(response.Body).Decode(&fullResponse); err != nil {
-		// response body is empty
-		if err == io.EOF {
-			return nil
-		}
-		return err
-	}
-	return nil
 }
 
 // newResponse creates a new Response for the provided http.Response.
@@ -235,10 +146,26 @@ func newResponse(r *http.Response) *Response {
 // The provided ctx must be non-nil, if it is nil an error is returned. If it is
 // canceled or times out, ctx.Err() will be returned.
 func (c *Client) BareDo(ctx context.Context, req *http.Request) (*Response, error) {
+	if ctx == nil {
+		return nil, errNonNilContext
+	}
+	req = req.WithContext(ctx)
+
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		// If we got an error, and the context has been canceled,
+		// the context's error is probably more useful.
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		if e, ok := err.(*url.Error); ok {
+			return nil, e
+		}
 	}
+
 	r := newResponse(resp)
 	err = CheckResponse(resp)
 	return r, err
@@ -297,39 +224,48 @@ func addOptions(s string, opts interface{}) (string, error) {
 	return u.String(), nil
 }
 
-// parseBoolResponse determines the boolean result from a GitHub API response.
-// Several GitHub API methods return boolean responses indicated by the HTTP
-// status code in the response (true indicated by a 204, false indicated by a
-// 404). This helper function will determine that result and hide the 404
-// error if present. Any other error will be returned through as-is.
+// parseBoolResponse determines the boolean result from a Stardog API response.
+// Some Stardog API methods return boolean responses indicated by the HTTP
+// status code in the response. Any error will be returned through as-is.
 func parseBoolResponse(err error) (bool, error) {
 	if err == nil {
 		return true, nil
 	}
-
-	if err, ok := err.(*ErrorResponse); ok && err.Response.StatusCode == http.StatusNotFound {
-		// Simply false. In this one case, we do not pass the error through.
-		return false, nil
+	if err, ok := err.(*ErrorResponse); ok && err.Response.StatusCode >= http.StatusBadRequest {
+		return false, err
 	}
-
-	// some other real error occurred
 	return false, err
 }
 
+// compareHTTPResponse returns whether two http.Response objects are equal or not.
+// Currently, only StatusCode is checked. This function is used when implementing the
+// Is(error) bool interface for the custom error types in this package.
+func compareHTTPResponse(r1, r2 *http.Response) bool {
+	if r1 == nil && r2 == nil {
+		return true
+	}
+
+	if r1 != nil && r2 != nil {
+		return r1.StatusCode == r2.StatusCode
+	}
+	return false
+}
+
 /*
-An ErrorResponse reports one or more errors caused by an API request.
+An ErrorResponse reports an error caused by an API request.
 
 Stardog API docs: https://stardog-union.github.io/http-docs/#section/Error-Codes
 */
 type ErrorResponse struct {
 	Response *http.Response // HTTP response that caused this error
 	Message  string         `json:"message"` // error message
+	Code     string         `json:"code"`    // Stardog error code
 }
 
 func (r *ErrorResponse) Error() string {
-	return fmt.Sprintf("[%v] [%d] [%v]",
+  return fmt.Sprintf("[%v] [%v] | [%v] [%v]",
 		r.Response.Request.Method,
-		r.Response.StatusCode, r.Message)
+		r.Response.Status, r.Message, r.Code)
 }
 
 // CheckResponse checks the API response for errors, and returns them if
@@ -344,12 +280,102 @@ func CheckResponse(r *http.Response) error {
 
 	errorResponse := &ErrorResponse{Response: r}
 	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	if err == nil && data != nil {
-		fmt.Println(fmt.Sprintf("%v", string(data)))
-		json.Unmarshal(data, errorResponse)
+	if err == nil && len(data) > 0 {
+		err := json.Unmarshal(data, errorResponse)
+		if err != nil {
+			return errors.New(string(data))
+		}
 	}
 	return errorResponse
+}
+
+// Is returns whether the provided error equals this error.
+func (r *ErrorResponse) Is(target error) bool {
+	v, ok := target.(*ErrorResponse)
+	if !ok {
+		return false
+	}
+
+	if r.Message != v.Message || (r.Code != v.Code) ||
+		!compareHTTPResponse(r.Response, v.Response) {
+		return false
+	}
+
+	return true
+}
+
+// RoundTrip implements the RoundTripper interface.
+func (t *BasicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req2 := setCredentialsAsHeaders(req, t.Username, t.Password)
+	return t.transport().RoundTrip(req2)
+}
+
+// Client returns an *http.Client that makes requests that are authenticated
+// using HTTP Basic Authentication.
+func (t *BasicAuthTransport) Client() *http.Client {
+	return &http.Client{Transport: t}
+}
+
+func (t *BasicAuthTransport) transport() http.RoundTripper {
+	if t.Transport != nil {
+		return t.Transport
+	}
+	return http.DefaultTransport
+}
+
+func setCredentialsAsHeaders(req *http.Request, username, password string) *http.Request {
+	// To set extra headers, we must make a copy of the Request so
+	// that we don't modify the Request we were given. This is required by the
+	// specification of http.RoundTripper.
+	//
+	// Since we are going to modify only req.Header here, we only need a deep copy
+	// of req.Header.
+	convertedRequest := new(http.Request)
+	*convertedRequest = *req
+	convertedRequest.Header = make(http.Header, len(req.Header))
+
+	for k, s := range req.Header {
+		convertedRequest.Header[k] = append([]string(nil), s...)
+	}
+	convertedRequest.SetBasicAuth(username, password)
+	return convertedRequest
+}
+
+type BearerAuthTransport struct {
+	BearerToken string
+	Transport   http.RoundTripper
+}
+
+func (t *BearerAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req2 := setBearerAuthHeaders(req, t.BearerToken)
+	return t.transport().RoundTrip(req2)
+}
+
+func (t *BearerAuthTransport) transport() http.RoundTripper {
+	if t.Transport != nil {
+		return t.Transport
+	}
+	return http.DefaultTransport
+}
+
+func (t *BearerAuthTransport) Client() *http.Client {
+	return &http.Client{Transport: t}
+}
+
+func setBearerAuthHeaders(req *http.Request, bearer string) *http.Request {
+	// To set extra headers, we must make a copy of the Request so
+	// that we don't modify the Request we were given. This is required by the
+	// specification of http.RoundTripper.
+	//
+	// Since we are going to modify only req.Header here, we only need a deep copy
+	// of req.Header.
+	convertedRequest := new(http.Request)
+	*convertedRequest = *req
+	convertedRequest.Header = make(http.Header, len(req.Header))
+
+	for k, s := range req.Header {
+		convertedRequest.Header[k] = append([]string(nil), s...)
+	}
+	convertedRequest.Header.Set("Authorization", fmt.Sprintf("bearer %s", bearer))
+	return convertedRequest
 }
