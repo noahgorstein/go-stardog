@@ -3,6 +3,7 @@ package stardog
 import (
 	"context"
 	"fmt"
+	"net/http"
 )
 
 type ServerAdminService service
@@ -31,7 +32,7 @@ type Process struct {
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Server-Admin/operation/aliveCheck
 func (s *ServerAdminService) IsAlive(ctx context.Context) (*bool, *Response, error) {
 	url := "admin/alive"
-	request, err := s.client.NewRequest("GET", url, nil, nil)
+	request, err := s.client.NewRequest(http.MethodGet, url, nil, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -48,7 +49,7 @@ func (s *ServerAdminService) GetProcesses(ctx context.Context) (*[]Process, *Res
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	request, err := s.client.NewRequest("GET", url, &headerOpts, nil)
+	request, err := s.client.NewRequest(http.MethodGet, url, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -68,7 +69,7 @@ func (s *ServerAdminService) GetProcess(ctx context.Context, processID string) (
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	request, err := s.client.NewRequest("GET", url, &headerOpts, nil)
+	request, err := s.client.NewRequest(http.MethodGet, url, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -85,7 +86,7 @@ func (s *ServerAdminService) GetProcess(ctx context.Context, processID string) (
 // Kill a given server process
 func (s *ServerAdminService) KillProcess(ctx context.Context, processID string) (*Response, error) {
 	url := fmt.Sprintf("admin/processes/%s", processID)
-	request, err := s.client.NewRequest("DELETE", url, nil, nil)
+	request, err := s.client.NewRequest(http.MethodDelete, url, nil, nil)
 	if err != nil {
 		return nil, err
 	}

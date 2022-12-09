@@ -87,6 +87,7 @@ func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
 
 func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
 	if !strings.HasSuffix(c.BaseURL.Path, "/") {
+    //revive:disable-next-line:error-strings
 		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.BaseURL)
 	}
 
@@ -274,6 +275,7 @@ func (r *ErrorResponse) Error() string {
 // API error responses are expected to have response
 // body, and a JSON response body that maps to ErrorResponse.
 func CheckResponse(r *http.Response) error {
+  //revive:disable-next-line:add-constant
 	if c := r.StatusCode; 200 <= c && c <= 299 {
 		return nil
 	}

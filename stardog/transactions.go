@@ -1,9 +1,10 @@
 package stardog
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-  "bytes"
+	"net/http"
 )
 
 type TransactionService service
@@ -16,7 +17,7 @@ func (s *TransactionService) Begin(ctx context.Context, database string) (string
   headerOpts := requestHeaderOptions{
     Accept: mediaTypePlainText,
   }
-	req, err := s.client.NewRequest("POST", u, &headerOpts, nil)
+	req, err := s.client.NewRequest(http.MethodPost, u, &headerOpts, nil)
 	if err != nil {
 		return "", nil, err
 	}

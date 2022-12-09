@@ -3,6 +3,7 @@ package stardog
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 )
 
@@ -120,7 +121,7 @@ func (s *SecurityService) GetUsers(ctx context.Context) ([]string, *Response, er
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	req, err := s.client.NewRequest("GET", u, &headerOpts, nil)
+	req, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -142,7 +143,7 @@ func (s *SecurityService) GetUserPermissions(ctx context.Context, username strin
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	request, err := s.client.NewRequest("GET", u, &headerOpts, nil)
+	request, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -163,7 +164,7 @@ func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, usern
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	request, err := s.client.NewRequest("GET", u, &headerOpts, nil)
+	request, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -186,7 +187,7 @@ func (s *SecurityService) GetUserDetails(ctx context.Context, username string) (
 		Accept: mediaTypeApplicationJSON,
 	}
 
-	request, err := s.client.NewRequest("GET", u, &headerOpts, nil)
+	request, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -208,7 +209,7 @@ func (s *SecurityService) IsSuperuser(ctx context.Context, username string) (*bo
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	request, err := s.client.NewRequest("GET", u, &headerOpts, nil)
+	request, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -230,7 +231,7 @@ func (s *SecurityService) IsEnabled(ctx context.Context, username string) (*bool
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	request, err := s.client.NewRequest("GET", u, &headerOpts, nil)
+	request, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -256,7 +257,7 @@ func (s *SecurityService) CreateUser(ctx context.Context, username string, passw
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 	}
-	request, err := s.client.NewRequest("POST", u, &headerOpts, credentials)
+	request, err := s.client.NewRequest(http.MethodPost, u, &headerOpts, credentials)
 	if err != nil {
 		return nil, err
 	}
@@ -269,13 +270,12 @@ func (s *SecurityService) CreateUser(ctx context.Context, username string, passw
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/deleteUser
 func (s *SecurityService) DeleteUser(ctx context.Context, username string) (*Response, error) {
 	u := fmt.Sprintf("admin/users/%s", username)
-	request, err := s.client.NewRequest("DELETE", u, nil, nil)
+	request, err := s.client.NewRequest(http.MethodDelete, u, nil, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	return s.client.Do(ctx, request, nil)
-
 }
 
 // Change user's password
@@ -290,7 +290,7 @@ func (s *SecurityService) ChangeUserPassword(ctx context.Context, username strin
 	reqBody := changePasswordRequest{
 		Password: password,
 	}
-	request, err := s.client.NewRequest("PUT", u, &headerOpts, reqBody)
+	request, err := s.client.NewRequest(http.MethodPut, u, &headerOpts, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +309,7 @@ func (s *SecurityService) EnableUser(ctx context.Context, username string, enabl
 		Enabled: enabled,
 	}
 
-	req, err := s.client.NewRequest("PUT", url, &headerOpts, reqBody)
+	req, err := s.client.NewRequest(http.MethodPut, url, &headerOpts, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +324,7 @@ func (s *SecurityService) GrantUserPermission(ctx context.Context, username stri
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 	}
-	req, err := s.client.NewRequest("PUT", url, &headerOpts, permission)
+	req, err := s.client.NewRequest(http.MethodPut, url, &headerOpts, permission)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +339,7 @@ func (s *SecurityService) RevokeUserPermission(ctx context.Context, username str
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 	}
-	req, err := s.client.NewRequest("POST", url, &headerOpts, permission)
+	req, err := s.client.NewRequest(http.MethodPost, url, &headerOpts, permission)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +354,7 @@ func (s *SecurityService) GetUsersAssignedRole(ctx context.Context, rolename str
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	req, err := s.client.NewRequest("GET", u, &headerOpts, nil)
+	req, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -378,7 +378,7 @@ func (s *SecurityService) AssignRole(ctx context.Context, username string, rolen
 	reqBody := assignRoleRequest{
 		Rolename: rolename,
 	}
-	req, err := s.client.NewRequest("POST", url, &headerOpts, reqBody)
+	req, err := s.client.NewRequest(http.MethodPost, url, &headerOpts, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +390,7 @@ func (s *SecurityService) AssignRole(ctx context.Context, username string, rolen
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/removeUserRole
 func (s *SecurityService) UnassignRole(ctx context.Context, username string, rolename string) (*Response, error) {
 	url := fmt.Sprintf("admin/users/%s/roles/%s", username, rolename)
-	req, err := s.client.NewRequest("DELETE", url, nil, nil)
+	req, err := s.client.NewRequest(http.MethodDelete, url, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -405,7 +405,7 @@ func (s *SecurityService) GetRolesAssignedToUser(ctx context.Context, username s
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	req, err := s.client.NewRequest("GET", url, &headerOpts, nil)
+	req, err := s.client.NewRequest(http.MethodGet, url, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -425,7 +425,7 @@ func (s *SecurityService) GetRoles(ctx context.Context) ([]string, *Response, er
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	req, err := s.client.NewRequest("GET", u, &headerOpts, nil)
+	req, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -448,7 +448,7 @@ func (s *SecurityService) CreateRole(ctx context.Context, rolename string) (*Res
 	reqBody := createRoleRequest{
 		Rolename: rolename,
 	}
-	req, err := s.client.NewRequest("POST", u, &headerOpts, reqBody)
+	req, err := s.client.NewRequest(http.MethodPost, u, &headerOpts, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -463,7 +463,7 @@ func (s *SecurityService) GetRolePermissions(ctx context.Context, rolename strin
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	req, err := s.client.NewRequest("GET", url, &headerOpts, nil)
+	req, err := s.client.NewRequest(http.MethodGet, url, &headerOpts, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -483,7 +483,7 @@ func (s *SecurityService) GrantRolePermission(ctx context.Context, rolename stri
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 	}
-	req, err := s.client.NewRequest("PUT", url, &headerOpts, permission)
+	req, err := s.client.NewRequest(http.MethodPut, url, &headerOpts, permission)
 	if err != nil {
 		return nil, err
 	}
@@ -498,7 +498,7 @@ func (s *SecurityService) RevokeRolePermission(ctx context.Context, rolename str
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 	}
-	req, err := s.client.NewRequest("POST", url, &headerOpts, permission)
+	req, err := s.client.NewRequest(http.MethodPost, url, &headerOpts, permission)
 	if err != nil {
 		return nil, err
 	}
@@ -517,7 +517,7 @@ func (s *SecurityService) DeleteRole(ctx context.Context, rolename string, opts 
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
-	req, err := s.client.NewRequest("DELETE", urlWithOptions, &headerOpts, nil)
+	req, err := s.client.NewRequest(http.MethodDelete, urlWithOptions, &headerOpts, nil)
 	if err != nil {
 		return nil, err
 	}
