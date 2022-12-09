@@ -95,10 +95,10 @@ const (
 )
 
 // Helper function to create a Permission struct
-func NewPermission(action Action, resource_type ResourceType, resource []string) *Permission {
+func NewPermission(action Action, resourceType ResourceType, resource []string) *Permission {
 	permission := Permission{
 		Action:       string(action),
-		ResourceType: string(resource_type),
+		ResourceType: string(resourceType),
 		Resource:     resource,
 	}
 	return &permission
@@ -118,7 +118,7 @@ type Permission struct {
 func (s *SecurityService) GetUsers(ctx context.Context) ([]string, *Response, error) {
 	u := "admin/users"
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, err := s.client.NewRequest("GET", u, &headerOpts, nil)
 	if err != nil {
@@ -140,7 +140,7 @@ func (s *SecurityService) GetUsers(ctx context.Context) ([]string, *Response, er
 func (s *SecurityService) GetUserPermissions(ctx context.Context, username string) (*[]Permission, *Response, error) {
 	u := fmt.Sprintf("admin/permissions/user/%s", username)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	request, err := s.client.NewRequest("GET", u, &headerOpts, nil)
 	if err != nil {
@@ -161,7 +161,7 @@ func (s *SecurityService) GetUserPermissions(ctx context.Context, username strin
 func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, username string) (*[]Permission, *Response, error) {
 	u := fmt.Sprintf("admin/permissions/effective/user/%s", username)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	request, err := s.client.NewRequest("GET", u, &headerOpts, nil)
 	if err != nil {
@@ -183,7 +183,7 @@ func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, usern
 func (s *SecurityService) GetUserDetails(ctx context.Context, username string) (*UserDetails, *Response, error) {
 	u := fmt.Sprintf("admin/users/%s", username)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 
 	request, err := s.client.NewRequest("GET", u, &headerOpts, nil)
@@ -206,7 +206,7 @@ func (s *SecurityService) GetUserDetails(ctx context.Context, username string) (
 func (s *SecurityService) IsSuperuser(ctx context.Context, username string) (*bool, *Response, error) {
 	u := fmt.Sprintf("admin/users/%s/superuser", username)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	request, err := s.client.NewRequest("GET", u, &headerOpts, nil)
 	if err != nil {
@@ -228,7 +228,7 @@ func (s *SecurityService) IsSuperuser(ctx context.Context, username string) (*bo
 func (s *SecurityService) IsEnabled(ctx context.Context, username string) (*bool, *Response, error) {
 	u := fmt.Sprintf("admin/users/%s/enabled", username)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	request, err := s.client.NewRequest("GET", u, &headerOpts, nil)
 	if err != nil {
@@ -254,7 +254,7 @@ func (s *SecurityService) CreateUser(ctx context.Context, username string, passw
 		Password: strings.Split(password, ""),
 	}
 	headerOpts := requestHeaderOptions{
-		ContentType: mediaTypeApplicationJson,
+		ContentType: mediaTypeApplicationJSON,
 	}
 	request, err := s.client.NewRequest("POST", u, &headerOpts, credentials)
 	if err != nil {
@@ -284,7 +284,7 @@ func (s *SecurityService) DeleteUser(ctx context.Context, username string) (*Res
 func (s *SecurityService) ChangeUserPassword(ctx context.Context, username string, password string) (*Response, error) {
 	u := fmt.Sprintf("admin/users/%s/pwd", username)
 	headerOpts := requestHeaderOptions{
-		ContentType: mediaTypeApplicationJson,
+		ContentType: mediaTypeApplicationJSON,
 	}
 
 	reqBody := changePasswordRequest{
@@ -303,7 +303,7 @@ func (s *SecurityService) ChangeUserPassword(ctx context.Context, username strin
 func (s *SecurityService) EnableUser(ctx context.Context, username string, enabled bool) (*Response, error) {
 	url := fmt.Sprintf("admin/users/%s/enabled", username)
 	headerOpts := requestHeaderOptions{
-		ContentType: mediaTypeApplicationJson,
+		ContentType: mediaTypeApplicationJSON,
 	}
 	reqBody := enableRequest{
 		Enabled: enabled,
@@ -322,7 +322,7 @@ func (s *SecurityService) EnableUser(ctx context.Context, username string, enabl
 func (s *SecurityService) GrantUserPermission(ctx context.Context, username string, permission Permission) (*Response, error) {
 	url := fmt.Sprintf("admin/permissions/user/%s", username)
 	headerOpts := requestHeaderOptions{
-		ContentType: mediaTypeApplicationJson,
+		ContentType: mediaTypeApplicationJSON,
 	}
 	req, err := s.client.NewRequest("PUT", url, &headerOpts, permission)
 	if err != nil {
@@ -337,7 +337,7 @@ func (s *SecurityService) GrantUserPermission(ctx context.Context, username stri
 func (s *SecurityService) RevokeUserPermission(ctx context.Context, username string, permission Permission) (*Response, error) {
 	url := fmt.Sprintf("admin/permissions/user/%s/delete", username)
 	headerOpts := requestHeaderOptions{
-		ContentType: mediaTypeApplicationJson,
+		ContentType: mediaTypeApplicationJSON,
 	}
 	req, err := s.client.NewRequest("POST", url, &headerOpts, permission)
 	if err != nil {
@@ -352,7 +352,7 @@ func (s *SecurityService) RevokeUserPermission(ctx context.Context, username str
 func (s *SecurityService) GetUsersAssignedRole(ctx context.Context, rolename string) ([]string, *Response, error) {
 	u := fmt.Sprintf("admin/roles/%s/users", rolename)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, err := s.client.NewRequest("GET", u, &headerOpts, nil)
 	if err != nil {
@@ -373,7 +373,7 @@ func (s *SecurityService) GetUsersAssignedRole(ctx context.Context, rolename str
 func (s *SecurityService) AssignRole(ctx context.Context, username string, rolename string) (*Response, error) {
 	url := fmt.Sprintf("admin/users/%s/roles", username)
 	headerOpts := requestHeaderOptions{
-		ContentType: mediaTypeApplicationJson,
+		ContentType: mediaTypeApplicationJSON,
 	}
 	reqBody := assignRoleRequest{
 		Rolename: rolename,
@@ -403,7 +403,7 @@ func (s *SecurityService) UnassignRole(ctx context.Context, username string, rol
 func (s *SecurityService) GetRolesAssignedToUser(ctx context.Context, username string) ([]string, *Response, error) {
 	url := fmt.Sprintf("admin/users/%s/roles", username)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, err := s.client.NewRequest("GET", url, &headerOpts, nil)
 	if err != nil {
@@ -423,7 +423,7 @@ func (s *SecurityService) GetRolesAssignedToUser(ctx context.Context, username s
 func (s *SecurityService) GetRoles(ctx context.Context) ([]string, *Response, error) {
 	u := "admin/roles"
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, err := s.client.NewRequest("GET", u, &headerOpts, nil)
 	if err != nil {
@@ -443,7 +443,7 @@ func (s *SecurityService) GetRoles(ctx context.Context) ([]string, *Response, er
 func (s *SecurityService) CreateRole(ctx context.Context, rolename string) (*Response, error) {
 	u := "admin/roles"
 	headerOpts := requestHeaderOptions{
-		ContentType: mediaTypeApplicationJson,
+		ContentType: mediaTypeApplicationJSON,
 	}
 	reqBody := createRoleRequest{
 		Rolename: rolename,
@@ -461,7 +461,7 @@ func (s *SecurityService) CreateRole(ctx context.Context, rolename string) (*Res
 func (s *SecurityService) GetRolePermissions(ctx context.Context, rolename string) (*[]Permission, *Response, error) {
 	url := fmt.Sprintf("admin/permissions/role/%s", rolename)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, err := s.client.NewRequest("GET", url, &headerOpts, nil)
 	if err != nil {
@@ -481,7 +481,7 @@ func (s *SecurityService) GetRolePermissions(ctx context.Context, rolename strin
 func (s *SecurityService) GrantRolePermission(ctx context.Context, rolename string, permission Permission) (*Response, error) {
 	url := fmt.Sprintf("admin/permissions/role/%s", rolename)
 	headerOpts := requestHeaderOptions{
-		ContentType: mediaTypeApplicationJson,
+		ContentType: mediaTypeApplicationJSON,
 	}
 	req, err := s.client.NewRequest("PUT", url, &headerOpts, permission)
 	if err != nil {
@@ -496,7 +496,7 @@ func (s *SecurityService) GrantRolePermission(ctx context.Context, rolename stri
 func (s *SecurityService) RevokeRolePermission(ctx context.Context, rolename string, permission Permission) (*Response, error) {
 	url := fmt.Sprintf("admin/permissions/role/%s/delete", rolename)
 	headerOpts := requestHeaderOptions{
-		ContentType: mediaTypeApplicationJson,
+		ContentType: mediaTypeApplicationJSON,
 	}
 	req, err := s.client.NewRequest("POST", url, &headerOpts, permission)
 	if err != nil {
@@ -515,7 +515,7 @@ func (s *SecurityService) DeleteRole(ctx context.Context, rolename string, opts 
 		return nil, err
 	}
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, err := s.client.NewRequest("DELETE", urlWithOptions, &headerOpts, nil)
 	if err != nil {

@@ -470,7 +470,7 @@ func Test_CreateRole(t *testing.T) {
 		v := new(createRoleRequest)
 		json.NewDecoder(r.Body).Decode(v)
 		testMethod(t, r, "POST")
-		testHeader(t, r, "Content-Type", mediaTypeApplicationJson)
+		testHeader(t, r, "Content-Type", mediaTypeApplicationJSON)
 
 		want := &createRoleRequest{Rolename: rolename}
 		if !cmp.Equal(v, want) {

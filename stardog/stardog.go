@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	DefaultServerUrl = "http://localhost:5820/"
+	DefaultServerURL = "http://localhost:5820/"
 	defaultUserAgent = "stardog-go"
 )
 

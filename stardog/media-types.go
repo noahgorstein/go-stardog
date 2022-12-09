@@ -1,6 +1,6 @@
 package stardog
 
 const (
-  mediaTypeApplicationJson = "application/json" 
+  mediaTypeApplicationJSON = "application/json" 
   mediaTypePlainText = "text/plain"
 )

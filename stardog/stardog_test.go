@@ -48,7 +48,7 @@ func setup() (client *Client, mux *http.ServeMux, serverURL string, teardown fun
 
 	// client is the Stardog client being tested and is
 	// configured to use test server.
-	client, _ = NewClient(DefaultServerUrl, nil)
+	client, _ = NewClient(DefaultServerURL, nil)
 	url, _ := url.Parse(server.URL + baseURLPath + "/")
 	client.BaseURL = url
 
@@ -56,16 +56,16 @@ func setup() (client *Client, mux *http.ServeMux, serverURL string, teardown fun
 }
 
 func TestNewClient(t *testing.T) {
-	c, _ := NewClient(DefaultServerUrl, nil)
+	c, _ := NewClient(DefaultServerURL, nil)
 
-	if got, want := c.BaseURL.String(), DefaultServerUrl; got != want {
+	if got, want := c.BaseURL.String(), DefaultServerURL; got != want {
 		t.Errorf("NewClient BaseURL is %v, want %v", got, want)
 	}
 	if got, want := c.UserAgent, defaultUserAgent; got != want {
 		t.Errorf("NewClient UserAgent is %v, want %v", got, want)
 	}
 
-	c2, _ := NewClient(DefaultServerUrl, nil)
+	c2, _ := NewClient(DefaultServerURL, nil)
 	if c.client == c2.client {
 		t.Error("NewClient returned same http.Clients, but they should differ")
 	}
@@ -90,7 +90,7 @@ func TestNewClient_invalidServerURL(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	c, _ := NewClient(DefaultServerUrl, nil)
+	c, _ := NewClient(DefaultServerURL, nil)
 	c2 := c.Client()
 	if c.client == c2 {
 		t.Error("Client returned same http.Client, but should be different")
@@ -151,12 +151,12 @@ func testBadOptions(t *testing.T, methodName string, f func() error) {
 }
 
 func TestNewRequest(t *testing.T) {
-	c, _ := NewClient(DefaultServerUrl, nil)
+	c, _ := NewClient(DefaultServerURL, nil)
 
-	inURL, outURL := "/foo", DefaultServerUrl+"foo"
+	inURL, outURL := "/foo", DefaultServerURL+"foo"
 	inBody, outBody := &isEnabledResponse{Enabled: true}, `{"enabled":true}`+"\n"
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, _ := c.NewRequest("GET", inURL, &headerOpts, inBody)
 
@@ -180,14 +180,14 @@ func TestNewRequest(t *testing.T) {
 }
 
 func TestNewRequest_invalidJSON(t *testing.T) {
-	c, _ := NewClient(DefaultServerUrl, nil)
+	c, _ := NewClient(DefaultServerURL, nil)
 
 	type T struct {
 		A map[interface{}]interface{}
 	}
 	headerOpts := requestHeaderOptions{
-		ContentType: mediaTypeApplicationJson,
-		Accept:      mediaTypeApplicationJson,
+		ContentType: mediaTypeApplicationJSON,
+		Accept:      mediaTypeApplicationJSON,
 	}
 	_, err := c.NewRequest("GET", ".", &headerOpts, &T{})
 
@@ -210,18 +210,18 @@ func testURLParseError(t *testing.T, err error) {
 }
 
 func TestNewRequest_badURL(t *testing.T) {
-	c, _ := NewClient(DefaultServerUrl, nil)
+	c, _ := NewClient(DefaultServerURL, nil)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	_, err := c.NewRequest("GET", ":", &headerOpts, nil)
 	testURLParseError(t, err)
 }
 
 func TestNewRequest_badMethod(t *testing.T) {
-	c, _ := NewClient(DefaultServerUrl, nil)
+	c, _ := NewClient(DefaultServerURL, nil)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	if _, err := c.NewRequest("FAKE\nMETHOD", ".", &headerOpts, nil); err == nil {
 		t.Fatal("NewRequest returned nil; expected error")
@@ -241,7 +241,7 @@ func TestBareDo_returnsOpenBody(t *testing.T) {
 
 	ctx := context.Background()
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, err := client.NewRequest("GET", "test-url", &headerOpts, nil)
 	if err != nil {
@@ -400,10 +400,10 @@ func TestBasicAuthTransport(t *testing.T) {
 		Username: username,
 		Password: password,
 	}
-	basicAuthClient, _ := NewClient(DefaultServerUrl, tp.Client())
+	basicAuthClient, _ := NewClient(DefaultServerURL, tp.Client())
 	basicAuthClient.BaseURL = client.BaseURL
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, _ := basicAuthClient.NewRequest("GET", ".", &headerOpts, nil)
 	ctx := context.Background()
@@ -455,10 +455,10 @@ func TestBearerAuthTransport(t *testing.T) {
 	tp := &BearerAuthTransport{
 		BearerToken: "12345",
 	}
-	bearerAuthClient, _ := NewClient(DefaultServerUrl, tp.Client())
+	bearerAuthClient, _ := NewClient(DefaultServerURL, tp.Client())
 	bearerAuthClient.BaseURL = client.BaseURL
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, _ := bearerAuthClient.NewRequest("GET", ".", &headerOpts, nil)
 	ctx := context.Background()
@@ -604,10 +604,10 @@ func TestErrorResponse_Error(t *testing.T) {
 }
 
 func TestNewRequest_emptyBody(t *testing.T) {
-	c, _ := NewClient(DefaultServerUrl, nil)
+	c, _ := NewClient(DefaultServerURL, nil)
 	var i interface{}
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, err := c.NewRequest("GET", "some-url", &headerOpts, i)
 	if err != nil {
@@ -631,7 +631,7 @@ func TestDo(t *testing.T) {
 	})
 
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, _ := client.NewRequest("GET", ".", &headerOpts, nil)
 	body := new(foo)
@@ -649,7 +649,7 @@ func TestDo_nilContext(t *testing.T) {
 	defer teardown()
 
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, _ := client.NewRequest("GET", ".", &headerOpts, nil)
 	_, err := client.Do(nil, req, nil)
@@ -668,7 +668,7 @@ func TestDo_httpError(t *testing.T) {
 	})
 
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, _ := client.NewRequest("GET", ".", &headerOpts, nil)
 	ctx := context.Background()
@@ -693,7 +693,7 @@ func TestDo_noContent(t *testing.T) {
 	var body json.RawMessage
 
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, _ := client.NewRequest("GET", ".", &headerOpts, nil)
 	ctx := context.Background()
@@ -714,7 +714,7 @@ func TestDo_invalidJsonBodyError(t *testing.T) {
 	})
 
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	req, _ := client.NewRequest("GET", ".", &headerOpts, nil)
 	ctx := context.Background()

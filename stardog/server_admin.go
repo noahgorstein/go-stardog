@@ -46,7 +46,7 @@ func (s *ServerAdminService) IsAlive(ctx context.Context) (*bool, *Response, err
 func (s *ServerAdminService) GetProcesses(ctx context.Context) (*[]Process, *Response, error) {
 	url := "admin/processes"
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	request, err := s.client.NewRequest("GET", url, &headerOpts, nil)
 	if err != nil {
@@ -66,7 +66,7 @@ func (s *ServerAdminService) GetProcesses(ctx context.Context) (*[]Process, *Res
 func (s *ServerAdminService) GetProcess(ctx context.Context, processID string) (*Process, *Response, error) {
 	url := fmt.Sprintf("admin/processes/%s", processID)
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJson,
+		Accept: mediaTypeApplicationJSON,
 	}
 	request, err := s.client.NewRequest("GET", url, &headerOpts, nil)
 	if err != nil {
