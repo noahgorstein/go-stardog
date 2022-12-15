@@ -32,18 +32,15 @@ client, _ := stardog.NewClient("http://localhost:5820", basicAuthTransport.Clien
 users, _, err := client.Security.GetUsers(ctx)
 ```
 
-The services of a client divide the API into logical chunks and roughly correspond to structure of the Stardog HTTP API documentation at https://stardog-union.github.io/http-docs/
+The services of a client divide the API into logical chunks and roughly correspond to structure of the [Stardog HTTP API documentation](https://stardog-union.github.io/http-docs/)
 
-{% note %}
+> **Note**<br>
+> Using the https://godoc.org/context package, one can easily
+> pass cancelation signals and deadlines to various services of the client for
+> handling a request. In case there is no context available, then `context.Background()`
+> can be used as a starting point.
 
-**Note:** Using the https://godoc.org/context package, one can easily
-pass cancelation signals and deadlines to various services of the client for
-handling a request. In case there is no context available, then context.Background()
-can be used as a starting point.
-
-{% endnote %}
-
-For more sample code snippets, head over to the https://github.com/noahgorstein/go-stardog/tree/main/examples directory.
+For more sample code snippets, head over to the [examples](https://github.com/noahgorstein/go-stardog/tree/main/examples) directory.
 
 # Authentication
 
