@@ -57,6 +57,16 @@ type BasicAuthTransport struct {
 	Transport http.RoundTripper
 }
 
+// BearerAuthTransport is an http.RoundTripper that authenticates all requests
+// using Bearer Authentication with the provided bearer token.
+type BearerAuthTransport struct {
+	BearerToken string
+
+	// Transport is the underlying HTTP transport to use when making requests.
+	// It will default to http.DefaultTransport if nil.
+	Transport   http.RoundTripper
+}
+
 type requestHeaderOptions struct {
 	ContentType string
 	Accept      string
@@ -343,11 +353,8 @@ func setCredentialsAsHeaders(req *http.Request, username, password string) *http
 	return convertedRequest
 }
 
-type BearerAuthTransport struct {
-	BearerToken string
-	Transport   http.RoundTripper
-}
 
+// RoundTrip implements the RoundTripper interface.
 func (t *BearerAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req2 := setBearerAuthHeaders(req, t.BearerToken)
 	return t.transport().RoundTrip(req2)
@@ -360,6 +367,8 @@ func (t *BearerAuthTransport) transport() http.RoundTripper {
 	return http.DefaultTransport
 }
 
+// Client returns an *http.Client that makes requests that are authenticated
+// using Bearer Authentication.
 func (t *BearerAuthTransport) Client() *http.Client {
 	return &http.Client{Transport: t}
 }

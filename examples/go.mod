@@ -1,6 +1,6 @@
 module github.com/noahgorstein/go-github/example
 
-go 1.18
+go 1.19
 
 require (
 	github.com/noahgorstein/go-stardog v0.2.3
@@ -9,7 +9,7 @@ require (
 
 require (
 	github.com/google/go-querystring v1.1.0 // indirect
-	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/term v0.2.0 // indirect
 )
 

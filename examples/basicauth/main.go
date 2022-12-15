@@ -1,3 +1,4 @@
+// The purpose of this example is to demonstrate how to create a basic auth client.
 package main
 
 import (
@@ -17,6 +18,7 @@ func main() {
 	r := bufio.NewReader(os.Stdin)
 	fmt.Print("Endpoint: ")
 	endpoint, _ := r.ReadString('\n')
+	endpoint = strings.TrimSpace(endpoint)
 
 	fmt.Print("Username: ")
 	username, _ := r.ReadString('\n')
@@ -30,12 +32,11 @@ func main() {
 		Username: strings.TrimSpace(username),
 		Password: strings.TrimSpace(password),
 	}
-	endpoint = strings.TrimSpace(endpoint)
 
 	client, err := stardog.NewClient(endpoint, basicAuthTransport.Client())
 	if err != nil {
-		fmt.Println(fmt.Printf("Error creating client: %v", err))
-		return
+		fmt.Printf("Error creating client: %v\n", err)
+		os.Exit(1)
 	}
 	isAlive, _, err := client.ServerAdmin.IsAlive(context.Background())
 	if err != nil {
@@ -44,11 +45,11 @@ func main() {
 			fmt.Printf("HTTP Status: %v\n", stardogErr.Response.Status)
 			fmt.Printf("Stardog Error Code: %v\n", stardogErr.Code)
 			fmt.Printf("Stardog Error Message: %v\n", stardogErr.Message)
-			return
+			os.Exit(1)
 		}
 		// some other error took place
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
-	fmt.Println(fmt.Sprintf("Is %v alive?: %v", endpoint, *isAlive))
+	fmt.Printf("Is %v alive?: %v\n", endpoint, *isAlive)
 }

@@ -6,16 +6,18 @@ import (
 	"net/http"
 )
 
+
+// ServerAdminService provides access to the server admin related functions in the Stardog API.
 type ServerAdminService service
 
-// Represents a Stardog server process' progress
+// ProcessProgress represents a Process's progress 
 type ProcessProgress struct {
 	Max     int    `json:"max"`
 	Current int    `json:"current"`
 	Stage   string `json:"stage"`
 }
 
-// Represents a Stardog server process
+// Process represent a Stardog server progress
 type Process struct {
 	Type      string          `json:"type"`
 	KernelID  string          `json:"kernelId"`
@@ -27,7 +29,7 @@ type Process struct {
 	Progress  ProcessProgress `json:"progress"`
 }
 
-// Determine whether the Stardog server is running
+// IsAlive returns whether the server is accepting traffic or not.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Server-Admin/operation/aliveCheck
 func (s *ServerAdminService) IsAlive(ctx context.Context) (*bool, *Response, error) {
@@ -41,7 +43,7 @@ func (s *ServerAdminService) IsAlive(ctx context.Context) (*bool, *Response, err
 	return &isAlive, resp, err
 }
 
-// Get all server processes
+// GetProcesses returns all server processes. 
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Monitoring/operation/listProcesses
 func (s *ServerAdminService) GetProcesses(ctx context.Context) (*[]Process, *Response, error) {
@@ -63,7 +65,7 @@ func (s *ServerAdminService) GetProcesses(ctx context.Context) (*[]Process, *Res
 	return &getProcessesResponse, resp, nil
 }
 
-// Get details for a given process
+// GetProcess returns details for a server process.
 func (s *ServerAdminService) GetProcess(ctx context.Context, processID string) (*Process, *Response, error) {
 	url := fmt.Sprintf("admin/processes/%s", processID)
 	headerOpts := requestHeaderOptions{
@@ -83,7 +85,7 @@ func (s *ServerAdminService) GetProcess(ctx context.Context, processID string) (
 	return &ps, resp, err
 }
 
-// Kill a given server process
+// KillProcess kills a server process. 
 func (s *ServerAdminService) KillProcess(ctx context.Context, processID string) (*Response, error) {
 	url := fmt.Sprintf("admin/processes/%s", processID)
 	request, err := s.client.NewRequest(http.MethodDelete, url, nil, nil)
