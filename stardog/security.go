@@ -10,16 +10,16 @@ import (
 // SecurityService handles communication with the security related methods of the Stardog API.
 type SecurityService service
 
-
 // UserDetails represents all details about a Stardog user
 type UserDetails struct {
+	Username    *string      `json:"username,omitempty"`
 	Enabled     bool         `json:"enabled"`
 	Superuser   bool         `json:"superuser"`
 	Roles       []string     `json:"roles"`
 	Permissions []Permission `json:"permissions"`
 }
 
-type usersResponse struct {
+type getUsersResponse struct {
 	Users []string `json:"users"`
 }
 
@@ -35,21 +35,31 @@ type userPermissionsResponse struct {
 	Permissions []Permission `json:"permissions"`
 }
 
-type credentials struct {
+type createUserRequest struct {
 	Username string   `json:"username"`
 	Password []string `json:"password"`
 }
 
-type changePasswordRequest struct {
+type changeUserPasswordRequest struct {
 	Password string `json:"password"`
 }
 
-type enableRequest struct {
+type enableUserRequest struct {
 	Enabled bool `json:"enabled"`
 }
 
 type rolesResponse struct {
 	Roles []string `json:"roles"`
+}
+
+type getRolesWithDetailsResponse struct {
+  Roles []RoleDetails `json:"roles"`
+}
+
+// RoleDetails represents details about a role
+type RoleDetails struct {
+  Rolename string `json:"rolename"`
+  Permissions []Permission `json:"permissions"`
 }
 
 type createRoleRequest struct {
@@ -62,12 +72,20 @@ type rolePermissionsResponse struct {
 
 // DeleteRoleOptions specifies the optional parameters to the SecurityService.DeleteRole method.
 type DeleteRoleOptions struct {
-  // useful if you want to remove the role and it is currently assigned to users
+	// useful if you want to remove the role and it is currently assigned to users
 	Force bool `url:"force"`
 }
 
 type assignRoleRequest struct {
 	Rolename string `json:"rolename"`
+}
+
+type overwriteRolesRequest struct {
+	Roles []string `json:"roles"`
+}
+
+type getUsersWithDetailsResponse struct {
+	Users []UserDetails `json:"users"`
 }
 
 // Action represents the action in a permission definition.
@@ -102,7 +120,7 @@ const (
 	AllResourceTypes  ResourceType = "*"
 )
 
-// NewPermission represents a new permission to be granted/revoked 
+// NewPermission represents a new permission to be granted/revoked
 func NewPermission(action Action, resourceType ResourceType, resource []string) *Permission {
 	permission := Permission{
 		Action:       string(action),
@@ -112,10 +130,10 @@ func NewPermission(action Action, resourceType ResourceType, resource []string) 
 	return &permission
 }
 
-// Permission represents a user/role permission. 
+// Permission represents a user/role permission.
 //
-// Some read-only methods will return an optional 'explicit' field indicating if the permission 
-// was explicitly granted to the user or if it is implicitly granted via a role. When granting/revoking 
+// Some read-only methods will return an optional 'explicit' field indicating if the permission
+// was explicitly granted to the user or if it is implicitly granted via a role. When granting/revoking
 // a permission you should not provide a value for 'explicit'. The NewPermission function is provided
 // for when you need construct a permission to be granted/revoked.
 type Permission struct {
@@ -125,7 +143,7 @@ type Permission struct {
 	Explicit     *bool    `json:"explicit,omitempty"`
 }
 
-// GetUsers returns the name of all users in the server 
+// GetUsers returns the name of all users in the server
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/GetUsers/operation/listUsers
 func (s *SecurityService) GetUsers(ctx context.Context) ([]string, *Response, error) {
@@ -138,7 +156,7 @@ func (s *SecurityService) GetUsers(ctx context.Context) ([]string, *Response, er
 		return nil, nil, err
 	}
 
-	var usersResponse *usersResponse
+	var usersResponse *getUsersResponse
 	resp, err := s.client.Do(ctx, req, &usersResponse)
 	if err != nil {
 		return nil, resp, err
@@ -146,11 +164,33 @@ func (s *SecurityService) GetUsers(ctx context.Context) ([]string, *Response, er
 	return usersResponse.Users, resp, err
 }
 
-// GetUserPermissions returns the permissions explicitly assigned to user. Permissions granted by a 
-// role the user may be assigned will not be contained in the response. Use UserEffectivePermissions for that.
+// GetUsersWithDetails returns a list of all users in the system with 
+// details (username, enabled status, superuser status, permissions, and roles)
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/listUsersDetailed
+func (s *SecurityService) GetUsersWithDetails(ctx context.Context) ([]UserDetails, *Response, error) {
+	u := "admin/users/list"
+	headerOpts := requestHeaderOptions{
+		Accept: mediaTypeApplicationJSON,
+	}
+	req, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var userListWithDetails *getUsersWithDetailsResponse
+	resp, err := s.client.Do(ctx, req, &userListWithDetails)
+	if err != nil {
+		return nil, resp, err
+	}
+	return userListWithDetails.Users, resp, err
+}
+
+// GetUserPermissions returns the permissions explicitly assigned to user. Permissions granted to a user via role assignment
+// will not be contained in the response. Use GetUserEffectivePermissions for that.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/getUserPermissions
-func (s *SecurityService) GetUserPermissions(ctx context.Context, username string) (*[]Permission, *Response, error) {
+func (s *SecurityService) GetUserPermissions(ctx context.Context, username string) ([]Permission, *Response, error) {
 	u := fmt.Sprintf("admin/permissions/user/%s", username)
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -165,13 +205,13 @@ func (s *SecurityService) GetUserPermissions(ctx context.Context, username strin
 	if err != nil {
 		return nil, resp, err
 	}
-	return &getUserPermissionsResponse.Permissions, resp, nil
+	return getUserPermissionsResponse.Permissions, resp, nil
 }
 
-// GetUserEffectivePermissions returns permissions assigned to a given user as well as those granted by assigned roles.
+// GetUserEffectivePermissions returns permissions explicitly assigned to a user and via role assignment. 
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/getEffectiveUserPermissions
-func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, username string) (*[]Permission, *Response, error) {
+func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, username string) ([]Permission, *Response, error) {
 	u := fmt.Sprintf("admin/permissions/effective/user/%s", username)
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -187,7 +227,7 @@ func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, usern
 		return nil, resp, err
 	}
 
-	return &getUserPermissionsResponse.Permissions, resp, nil
+	return getUserPermissionsResponse.Permissions, resp, nil
 }
 
 // GetUserDetails returns user attributes (enabled and superuser), roles assigned to the user, and the user's
@@ -257,13 +297,13 @@ func (s *SecurityService) IsEnabled(ctx context.Context, username string) (*bool
 	return &isEnabledResponse.Enabled, resp, nil
 }
 
-// CreateUser adds a user to the system. 
+// CreateUser adds a user to the system.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/addUser
 func (s *SecurityService) CreateUser(ctx context.Context, username string, password string) (*Response, error) {
 	u := "admin/users"
 
-	credentials := credentials{
+	credentials := createUserRequest{
 		Username: username,
 		Password: strings.Split(password, ""),
 	}
@@ -300,7 +340,7 @@ func (s *SecurityService) ChangeUserPassword(ctx context.Context, username strin
 		ContentType: mediaTypeApplicationJSON,
 	}
 
-	reqBody := changePasswordRequest{
+	reqBody := changeUserPasswordRequest{
 		Password: password,
 	}
 	request, err := s.client.NewRequest(http.MethodPut, u, &headerOpts, reqBody)
@@ -318,7 +358,7 @@ func (s *SecurityService) EnableUser(ctx context.Context, username string, enabl
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 	}
-	reqBody := enableRequest{
+	reqBody := enableUserRequest{
 		Enabled: enabled,
 	}
 
@@ -372,7 +412,7 @@ func (s *SecurityService) GetUsersAssignedRole(ctx context.Context, rolename str
 		return nil, nil, err
 	}
 
-	var listUsersResponse *usersResponse
+	var listUsersResponse *getUsersResponse
 	resp, err := s.client.Do(ctx, req, &listUsersResponse)
 	if err != nil {
 		return nil, resp, err
@@ -380,7 +420,7 @@ func (s *SecurityService) GetUsersAssignedRole(ctx context.Context, rolename str
 	return listUsersResponse.Users, resp, err
 }
 
-// AssignRole assigns a role to a user. 
+// AssignRole assigns a role to a user.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/addUserRole
 func (s *SecurityService) AssignRole(ctx context.Context, username string, rolename string) (*Response, error) {
@@ -398,7 +438,25 @@ func (s *SecurityService) AssignRole(ctx context.Context, username string, rolen
 	return s.client.Do(ctx, req, nil)
 }
 
-// UnassignRole unassigns a role from a user. 
+// OverwriteRoles overwrites the the list roles assigned to a user. 
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/setUserRoles
+func (s *SecurityService) OverwriteRoles(ctx context.Context, username string, roles []string) (*Response, error) {
+	url := fmt.Sprintf("admin/users/%s/roles", username)
+	headerOpts := requestHeaderOptions{
+		ContentType: mediaTypeApplicationJSON,
+	}
+	reqBody := overwriteRolesRequest{
+		Roles: roles,
+	}
+	req, err := s.client.NewRequest(http.MethodPut, url, &headerOpts, reqBody)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+// UnassignRole unassigns a role from a user.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/removeUserRole
 func (s *SecurityService) UnassignRole(ctx context.Context, username string, rolename string) (*Response, error) {
@@ -410,7 +468,7 @@ func (s *SecurityService) UnassignRole(ctx context.Context, username string, rol
 	return s.client.Do(ctx, req, nil)
 }
 
-// GetRolesAssignedToUser returns the names of all roles assigned to a user. 
+// GetRolesAssignedToUser returns the names of all roles assigned to a user.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/getUserRoles
 func (s *SecurityService) GetRolesAssignedToUser(ctx context.Context, username string) ([]string, *Response, error) {
@@ -450,7 +508,27 @@ func (s *SecurityService) GetRoles(ctx context.Context) ([]string, *Response, er
 	return listRolesResponse.Roles, resp, nil
 }
 
-// CreateRole adds a role to the system. 
+// GetRolesWithPermissions returns a list of roles in the system with their permissions 
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Roles/operation/listRolesDetailed
+func (s *SecurityService) GetRolesWithDetails(ctx context.Context) ([]RoleDetails, *Response, error) {
+	u := "admin/roles/list"
+	headerOpts := requestHeaderOptions{
+		Accept: mediaTypeApplicationJSON,
+	}
+	req, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	var getRolesWithDetailsResponse *getRolesWithDetailsResponse
+	resp, err := s.client.Do(ctx, req, &getRolesWithDetailsResponse)
+	if err != nil {
+		return nil, resp, err
+	}
+	return getRolesWithDetailsResponse.Roles, resp, nil
+}
+
+// CreateRole adds a role to the system.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Roles/operation/addRole
 func (s *SecurityService) CreateRole(ctx context.Context, rolename string) (*Response, error) {
@@ -468,10 +546,10 @@ func (s *SecurityService) CreateRole(ctx context.Context, rolename string) (*Res
 	return s.client.Do(ctx, req, nil)
 }
 
-// GetRolePermissions returns the permissions assigned to a role. 
+// GetRolePermissions returns the permissions assigned to a role.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/getRolePermissions
-func (s *SecurityService) GetRolePermissions(ctx context.Context, rolename string) (*[]Permission, *Response, error) {
+func (s *SecurityService) GetRolePermissions(ctx context.Context, rolename string) ([]Permission, *Response, error) {
 	url := fmt.Sprintf("admin/permissions/role/%s", rolename)
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -485,10 +563,10 @@ func (s *SecurityService) GetRolePermissions(ctx context.Context, rolename strin
 	if err != nil {
 		return nil, resp, err
 	}
-	return &rolePermissionsResponse.Permissions, resp, nil
+	return rolePermissionsResponse.Permissions, resp, nil
 }
 
-// GrantRolePermission grants a permission to a role. 
+// GrantRolePermission grants a permission to a role.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/addUserPermission
 func (s *SecurityService) GrantRolePermission(ctx context.Context, rolename string, permission Permission) (*Response, error) {
@@ -503,7 +581,7 @@ func (s *SecurityService) GrantRolePermission(ctx context.Context, rolename stri
 	return s.client.Do(ctx, req, nil)
 }
 
-// RevokeRolePermission revokes a permission from a role. 
+// RevokeRolePermission revokes a permission from a role.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/deleteRolePermission
 func (s *SecurityService) RevokeRolePermission(ctx context.Context, rolename string, permission Permission) (*Response, error) {
@@ -518,7 +596,7 @@ func (s *SecurityService) RevokeRolePermission(ctx context.Context, rolename str
 	return s.client.Do(ctx, req, nil)
 }
 
-// DeleteRole deletes the role from the system. 
+// DeleteRole deletes the role from the system.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Roles/operation/deleteRole
 func (s *SecurityService) DeleteRole(ctx context.Context, rolename string, opts *DeleteRoleOptions) (*Response, error) {
