@@ -368,12 +368,12 @@ func Test_CreateUser(t *testing.T) {
 	var password = strings.Split("gandalf", "")
 
 	mux.HandleFunc("/admin/users", func(w http.ResponseWriter, r *http.Request) {
-		v := new(credentials)
+		v := new(createUserRequest)
 		json.NewDecoder(r.Body).Decode(v)
 		testMethod(t, r, "POST")
 		testHeader(t, r, "Content-Type", "application/json")
 
-		want := &credentials{Username: username, Password: password}
+		want := &createUserRequest{Username: username, Password: password}
 		if !cmp.Equal(v, want) {
 			t.Errorf("Request body = %+v, want %+v", v, want)
 		}
@@ -423,12 +423,12 @@ func Test_ChangeUserPassword(t *testing.T) {
 	var password = "somePassword"
 
 	mux.HandleFunc(fmt.Sprintf("/admin/users/%s/pwd", username), func(w http.ResponseWriter, r *http.Request) {
-		v := new(changePasswordRequest)
+		v := new(changeUserPasswordRequest)
 		json.NewDecoder(r.Body).Decode(v)
 		testMethod(t, r, "PUT")
 		testHeader(t, r, "Content-Type", "application/json")
 
-		want := &changePasswordRequest{Password: password}
+		want := &changeUserPasswordRequest{Password: password}
 		if !cmp.Equal(v, want) {
 			t.Errorf("Request body = %+v, want %+v", v, want)
 		}
@@ -454,12 +454,12 @@ func Test_EnableUser(t *testing.T) {
 	var username = "frodo"
 
 	mux.HandleFunc(fmt.Sprintf("/admin/users/%s/enabled", username), func(w http.ResponseWriter, r *http.Request) {
-		v := new(enableRequest)
+		v := new(enableUserRequest)
 		json.NewDecoder(r.Body).Decode(v)
 		testMethod(t, r, "PUT")
 		testHeader(t, r, "Content-Type", "application/json")
 
-		want := &enableRequest{Enabled: false}
+		want := &enableUserRequest{Enabled: false}
 		if !cmp.Equal(v, want) {
 			t.Errorf("Request body = %+v, want %+v", v, want)
 		}

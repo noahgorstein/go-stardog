@@ -19,7 +19,7 @@ type UserDetails struct {
 	Permissions []Permission `json:"permissions"`
 }
 
-type usersResponse struct {
+type getUsersResponse struct {
 	Users []string `json:"users"`
 }
 
@@ -35,16 +35,16 @@ type userPermissionsResponse struct {
 	Permissions []Permission `json:"permissions"`
 }
 
-type credentials struct {
+type createUserRequest struct {
 	Username string   `json:"username"`
 	Password []string `json:"password"`
 }
 
-type changePasswordRequest struct {
+type changeUserPasswordRequest struct {
 	Password string `json:"password"`
 }
 
-type enableRequest struct {
+type enableUserRequest struct {
 	Enabled bool `json:"enabled"`
 }
 
@@ -156,7 +156,7 @@ func (s *SecurityService) GetUsers(ctx context.Context) ([]string, *Response, er
 		return nil, nil, err
 	}
 
-	var usersResponse *usersResponse
+	var usersResponse *getUsersResponse
 	resp, err := s.client.Do(ctx, req, &usersResponse)
 	if err != nil {
 		return nil, resp, err
@@ -186,8 +186,8 @@ func (s *SecurityService) GetUsersWithDetails(ctx context.Context) ([]UserDetail
 	return userListWithDetails.Users, resp, err
 }
 
-// GetUserPermissions returns the permissions explicitly assigned to user. Permissions granted by a
-// role the user may be assigned will not be contained in the response. Use UserEffectivePermissions for that.
+// GetUserPermissions returns the permissions explicitly assigned to user. Permissions granted to a user via role assignment
+// will not be contained in the response. Use GetUserEffectivePermissions for that.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/getUserPermissions
 func (s *SecurityService) GetUserPermissions(ctx context.Context, username string) ([]Permission, *Response, error) {
@@ -208,7 +208,7 @@ func (s *SecurityService) GetUserPermissions(ctx context.Context, username strin
 	return getUserPermissionsResponse.Permissions, resp, nil
 }
 
-// GetUserEffectivePermissions returns permissions assigned to a given user as well as those granted by assigned roles.
+// GetUserEffectivePermissions returns permissions explicitly assigned to a user and via role assignment. 
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/getEffectiveUserPermissions
 func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, username string) ([]Permission, *Response, error) {
@@ -303,7 +303,7 @@ func (s *SecurityService) IsEnabled(ctx context.Context, username string) (*bool
 func (s *SecurityService) CreateUser(ctx context.Context, username string, password string) (*Response, error) {
 	u := "admin/users"
 
-	credentials := credentials{
+	credentials := createUserRequest{
 		Username: username,
 		Password: strings.Split(password, ""),
 	}
@@ -340,7 +340,7 @@ func (s *SecurityService) ChangeUserPassword(ctx context.Context, username strin
 		ContentType: mediaTypeApplicationJSON,
 	}
 
-	reqBody := changePasswordRequest{
+	reqBody := changeUserPasswordRequest{
 		Password: password,
 	}
 	request, err := s.client.NewRequest(http.MethodPut, u, &headerOpts, reqBody)
@@ -358,7 +358,7 @@ func (s *SecurityService) EnableUser(ctx context.Context, username string, enabl
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 	}
-	reqBody := enableRequest{
+	reqBody := enableUserRequest{
 		Enabled: enabled,
 	}
 
@@ -412,7 +412,7 @@ func (s *SecurityService) GetUsersAssignedRole(ctx context.Context, rolename str
 		return nil, nil, err
 	}
 
-	var listUsersResponse *usersResponse
+	var listUsersResponse *getUsersResponse
 	resp, err := s.client.Do(ctx, req, &listUsersResponse)
 	if err != nil {
 		return nil, resp, err
