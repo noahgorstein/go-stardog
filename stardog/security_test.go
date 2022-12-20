@@ -11,16 +11,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func newTrue() *bool {
-	b := true
-	return &b
-}
-
-func newFalse() *bool {
-	b := false
-	return &b
-}
-
 func Test_GetUsers(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
@@ -56,6 +46,92 @@ func Test_GetUsers(t *testing.T) {
 	})
 }
 
+func Test_GetUsersWithDetails(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	usersJSON := []byte(`
+{
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "superuser": true,
+      "roles": [],
+      "permissions": []
+    },
+    {
+      "username": "frodo",
+      "enabled": true,
+      "superuser": false,
+      "roles": ["reader", "writer", "creator"],
+      "permissions": [
+        {
+          "action": "READ",
+          "resource_type": "db",
+          "resource": [
+            "myDatabase"
+          ],
+          "explicit": true
+        }
+      ]
+    }
+  ]
+}
+  `)
+
+	wantUsers := &getUsersWithDetailsResponse{
+		Users: []UserDetails{
+			{
+				Username:    newString("admin"),
+				Roles:       []string{},
+				Enabled:     true,
+				Superuser:   true,
+				Permissions: []Permission{},
+			},
+			{
+				Username:  newString("frodo"),
+				Roles:     []string{"reader", "writer", "creator"},
+				Enabled:   true,
+				Superuser: false,
+				Permissions: []Permission{
+					{
+						Explicit:     newTrue(),
+						Action:       string("READ"),
+						ResourceType: string(Database),
+						Resource:     []string{"myDatabase"},
+					},
+				},
+			},
+		},
+	}
+
+	mux.HandleFunc("/admin/users/list", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(usersJSON)
+	})
+
+	ctx := context.Background()
+	got, _, err := client.Security.GetUsersWithDetails(ctx)
+	if err != nil {
+		t.Errorf("Security.GetUsersWithDetails returned error: %v", err)
+	}
+	if want := wantUsers.Users; !cmp.Equal(got, want) {
+		t.Errorf("Security.GetUsersWithDetails = %+v, want %+v", got, want)
+	}
+
+	const methodName = "GetUsersWithDetails"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.Security.GetUsersWithDetails(nil)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
 func Test_GetUserPermissions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
@@ -65,7 +141,7 @@ func Test_GetUserPermissions(t *testing.T) {
       {"action":"READ","resource_type":"named-graph","resource":["db1"]}
       ]
     }`
-	var wantUserPermissions = &[]Permission{
+	var wantUserPermissions = []Permission{
 		{Action: "READ", ResourceType: "named-graph", Resource: []string{"db1"}}}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/user/%s", "bob"), func(w http.ResponseWriter, r *http.Request) {
@@ -103,7 +179,7 @@ func Test_GetUserEffectivePermissions(t *testing.T) {
       {"action":"DELETE","resource_type":"named-graph","resource":["db1"], "explicit": false}
       ]
     }`
-	var wantUserEffectivePermissions = &[]Permission{
+	var wantUserEffectivePermissions = []Permission{
 		{Action: "DELETE", ResourceType: "named-graph", Resource: []string{"db1"}, Explicit: newFalse()}}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/effective/user/%s", "bob"), func(w http.ResponseWriter, r *http.Request) {
@@ -393,7 +469,7 @@ func Test_GetRoles(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
-	var usersJSON = []byte(`{
+	var rolesJSON = []byte(`{
   "roles": ["reader", "writer"] 
   }`)
 	var wantRoles = []string{"reader", "writer"}
@@ -402,7 +478,7 @@ func Test_GetRoles(t *testing.T) {
 		testMethod(t, r, "GET")
 		testHeader(t, r, "Accept", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write(usersJSON)
+		w.Write(rolesJSON)
 	})
 
 	ctx := context.Background()
@@ -417,6 +493,91 @@ func Test_GetRoles(t *testing.T) {
 	const methodName = "GetRoles"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		got, resp, err := client.Security.GetRoles(nil)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func Test_GetRolesWithDetails(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	rolesJSON := []byte(
+		`
+{
+  "roles": [
+    {
+      "rolename": "reader",
+      "permissions": [
+        {
+          "action": "READ",
+          "resource_type": "*",
+          "resource": [
+            "*"
+          ]
+        }
+      ]
+    },
+    {
+      "rolename": "writer",
+      "permissions": [
+        {
+          "action": "WRITE",
+          "resource_type": "*",
+          "resource": [
+            "*"
+          ]
+        }
+      ]
+    }
+  ]
+}`)
+	wantRoles := &getRolesWithDetailsResponse{
+		Roles: []RoleDetails{
+			{
+				Rolename: "reader",
+				Permissions: []Permission{
+					{
+						Action:       "READ",
+						ResourceType: "*",
+						Resource:     []string{"*"},
+					},
+				},
+			},
+			{
+				Rolename: "writer",
+				Permissions: []Permission{
+					{
+						Action:       "WRITE",
+						ResourceType: "*",
+						Resource:     []string{"*"},
+					},
+				},
+			},
+		},
+	}
+
+	mux.HandleFunc("/admin/roles/list", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(rolesJSON)
+	})
+
+	ctx := context.Background()
+	got, _, err := client.Security.GetRolesWithDetails(ctx)
+	if err != nil {
+		t.Errorf("Security.GetRolesWithDetails returned error: %v", err)
+	}
+	if want := wantRoles.Roles; !cmp.Equal(got, want) {
+		t.Errorf("Security.GetRolesWithDetails = %+v, want %+v", got, want)
+	}
+
+	const methodName = "GetRolesWithDetails"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.Security.GetRolesWithDetails(nil)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -502,47 +663,7 @@ func Test_GetRolePermissions(t *testing.T) {
       {"action":"READ","resource_type":"named-graph","resource":["db1"]}
       ]
     }`
-	var wantRolePermissions = &[]Permission{
-		{Action: "READ", ResourceType: "named-graph", Resource: []string{"db1"}}}
-
-	mux.HandleFunc(fmt.Sprintf("/admin/permissions/role/%s", rolename), func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "GET")
-		testHeader(t, r, "Accept", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(rolePermissionsJSON))
-	})
-
-	ctx := context.Background()
-	got, _, err := client.Security.GetRolePermissions(ctx, rolename)
-	if err != nil {
-		t.Errorf("Security.GetRolePermissions returned error: %v", err)
-	}
-	if want := wantRolePermissions; !cmp.Equal(got, want) {
-		t.Errorf("Security.GetRolePermissions = %+v, want %+v", got, want)
-	}
-
-	const methodName = "GetRolePermissions"
-	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.Security.GetRolePermissions(nil, "somerole")
-		if got != nil {
-			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
-		}
-		return resp, err
-	})
-}
-
-func Test_GetRolePermissions_writeResultsToBuffer(t *testing.T) {
-	client, mux, _, teardown := setup()
-	defer teardown()
-
-	var rolename = "reader"
-
-	var rolePermissionsJSON = `{
-    "permissions": [
-      {"action":"READ","resource_type":"named-graph","resource":["db1"]}
-      ]
-    }`
-	var wantRolePermissions = &[]Permission{
+	var wantRolePermissions = []Permission{
 		{Action: "READ", ResourceType: "named-graph", Resource: []string{"db1"}}}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/role/%s", rolename), func(w http.ResponseWriter, r *http.Request) {
@@ -798,6 +919,39 @@ func Test_AssignRole(t *testing.T) {
 	const methodName = "AssignRole"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		return client.Security.AssignRole(nil, username, rolename)
+	})
+}
+
+func Test_OverwriteRoles(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	roles := []string{"reader", "writer", "creator"}
+	username := "frodo"
+
+	mux.HandleFunc(fmt.Sprintf("/admin/users/%s/roles", username), func(w http.ResponseWriter, r *http.Request) {
+		v := new(overwriteRolesRequest)
+		json.NewDecoder(r.Body).Decode(v)
+		testMethod(t, r, "PUT")
+		testHeader(t, r, "Content-Type", "application/json")
+
+		want := &overwriteRolesRequest{Roles: []string{"reader", "writer", "creator"}}
+		if !cmp.Equal(v, want) {
+			t.Errorf("Request body = %+v, want %+v", v, want)
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	ctx := context.Background()
+	_, err := client.Security.OverwriteRoles(ctx, username, roles)
+	if err != nil {
+		t.Errorf("Security.OverwriteRoles returned error: %v", err)
+	}
+
+	const methodName = "OverwriteRoles"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		return client.Security.OverwriteRoles(nil, username, roles)
 	})
 }
 
