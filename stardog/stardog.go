@@ -64,7 +64,7 @@ type BearerAuthTransport struct {
 
 	// Transport is the underlying HTTP transport to use when making requests.
 	// It will default to http.DefaultTransport if nil.
-	Transport   http.RoundTripper
+	Transport http.RoundTripper
 }
 
 type requestHeaderOptions struct {
@@ -97,7 +97,7 @@ func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
 
 func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
 	if !strings.HasSuffix(c.BaseURL.Path, "/") {
-    //revive:disable-next-line:error-strings
+		//revive:disable-next-line:error-strings
 		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.BaseURL)
 	}
 
@@ -274,7 +274,7 @@ type ErrorResponse struct {
 }
 
 func (r *ErrorResponse) Error() string {
-  return fmt.Sprintf("[%v] [%v] | [%v] [%v]",
+	return fmt.Sprintf("[%v] [%v] | [%v] [%v]",
 		r.Response.Request.Method,
 		r.Response.Status, r.Message, r.Code)
 }
@@ -285,7 +285,7 @@ func (r *ErrorResponse) Error() string {
 // API error responses are expected to have response
 // body, and a JSON response body that maps to ErrorResponse.
 func CheckResponse(r *http.Response) error {
-  //revive:disable-next-line:add-constant
+	//revive:disable-next-line:add-constant
 	if c := r.StatusCode; 200 <= c && c <= 299 {
 		return nil
 	}
@@ -352,7 +352,6 @@ func setCredentialsAsHeaders(req *http.Request, username, password string) *http
 	convertedRequest.SetBasicAuth(username, password)
 	return convertedRequest
 }
-
 
 // RoundTrip implements the RoundTripper interface.
 func (t *BearerAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {

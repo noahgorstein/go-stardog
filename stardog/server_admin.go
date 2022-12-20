@@ -6,11 +6,10 @@ import (
 	"net/http"
 )
 
-
 // ServerAdminService provides access to the server admin related functions in the Stardog API.
 type ServerAdminService service
 
-// ProcessProgress represents a Process's progress 
+// ProcessProgress represents a Process's progress
 type ProcessProgress struct {
 	Max     int    `json:"max"`
 	Current int    `json:"current"`
@@ -43,7 +42,7 @@ func (s *ServerAdminService) IsAlive(ctx context.Context) (*bool, *Response, err
 	return &isAlive, resp, err
 }
 
-// GetProcesses returns all server processes. 
+// GetProcesses returns all server processes.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Monitoring/operation/listProcesses
 func (s *ServerAdminService) GetProcesses(ctx context.Context) (*[]Process, *Response, error) {
@@ -85,7 +84,7 @@ func (s *ServerAdminService) GetProcess(ctx context.Context, processID string) (
 	return &ps, resp, err
 }
 
-// KillProcess kills a server process. 
+// KillProcess kills a server process.
 func (s *ServerAdminService) KillProcess(ctx context.Context, processID string) (*Response, error) {
 	url := fmt.Sprintf("admin/processes/%s", processID)
 	request, err := s.client.NewRequest(http.MethodDelete, url, nil, nil)

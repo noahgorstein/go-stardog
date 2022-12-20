@@ -13,9 +13,8 @@ func Test_Begin(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
-  transactionUUID := "43FD6C7B-EE53-4618-A90D-7E45ADD8B433"
-  database := "myDatabase"
-
+	transactionUUID := "43FD6C7B-EE53-4618-A90D-7E45ADD8B433"
+	database := "myDatabase"
 
 	mux.HandleFunc(fmt.Sprintf("/%s/transaction/begin", database), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "POST")

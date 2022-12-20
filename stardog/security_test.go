@@ -22,7 +22,7 @@ func newFalse() *bool {
 }
 
 func newString(str string) *string {
-  return &str
+	return &str
 }
 
 func Test_GetUsers(t *testing.T) {

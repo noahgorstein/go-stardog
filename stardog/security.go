@@ -53,13 +53,13 @@ type rolesResponse struct {
 }
 
 type getRolesWithDetailsResponse struct {
-  Roles []RoleDetails `json:"roles"`
+	Roles []RoleDetails `json:"roles"`
 }
 
 // RoleDetails represents details about a role
 type RoleDetails struct {
-  Rolename string `json:"rolename"`
-  Permissions []Permission `json:"permissions"`
+	Rolename    string       `json:"rolename"`
+	Permissions []Permission `json:"permissions"`
 }
 
 type createRoleRequest struct {
@@ -164,7 +164,7 @@ func (s *SecurityService) GetUsers(ctx context.Context) ([]string, *Response, er
 	return usersResponse.Users, resp, err
 }
 
-// GetUsersWithDetails returns a list of all users in the system with 
+// GetUsersWithDetails returns a list of all users in the system with
 // details (username, enabled status, superuser status, permissions, and roles)
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/listUsersDetailed
@@ -208,7 +208,7 @@ func (s *SecurityService) GetUserPermissions(ctx context.Context, username strin
 	return getUserPermissionsResponse.Permissions, resp, nil
 }
 
-// GetUserEffectivePermissions returns permissions explicitly assigned to a user and via role assignment. 
+// GetUserEffectivePermissions returns permissions explicitly assigned to a user and via role assignment.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/getEffectiveUserPermissions
 func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, username string) ([]Permission, *Response, error) {
@@ -438,7 +438,7 @@ func (s *SecurityService) AssignRole(ctx context.Context, username string, rolen
 	return s.client.Do(ctx, req, nil)
 }
 
-// OverwriteRoles overwrites the the list roles assigned to a user. 
+// OverwriteRoles overwrites the the list roles assigned to a user.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/setUserRoles
 func (s *SecurityService) OverwriteRoles(ctx context.Context, username string, roles []string) (*Response, error) {
@@ -508,7 +508,7 @@ func (s *SecurityService) GetRoles(ctx context.Context) ([]string, *Response, er
 	return listRolesResponse.Roles, resp, nil
 }
 
-// GetRolesWithPermissions returns a list of roles in the system with their permissions 
+// GetRolesWithPermissions returns a list of roles in the system with their permissions
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Roles/operation/listRolesDetailed
 func (s *SecurityService) GetRolesWithDetails(ctx context.Context) ([]RoleDetails, *Response, error) {

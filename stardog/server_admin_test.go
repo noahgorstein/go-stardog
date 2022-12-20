@@ -2,16 +2,16 @@ package stardog
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
-  "fmt"
 
 	"github.com/google/go-cmp/cmp"
 )
 
 func Test_IsAlive_true(t *testing.T) {
-  client, mux, _, teardown := setup()
-  defer teardown()
+	client, mux, _, teardown := setup()
+	defer teardown()
 
 	mux.HandleFunc("/admin/alive", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
@@ -37,8 +37,8 @@ func Test_IsAlive_true(t *testing.T) {
 }
 
 func Test_IsAlive_false(t *testing.T) {
-  client, mux, _, teardown := setup()
-  defer teardown()
+	client, mux, _, teardown := setup()
+	defer teardown()
 
 	mux.HandleFunc("/admin/alive", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
@@ -86,13 +86,13 @@ func Test_GetProcesses(t *testing.T) {
 	var wantProcesses = &[]Process{
 		{
 			Type:      "Transaction",
-      KernelID: "3d6d135c-6b12-48c8-aa22-4f955fa7bea9",
+			KernelID:  "3d6d135c-6b12-48c8-aa22-4f955fa7bea9",
 			ID:        "c273226b-de41-407d-9343-6157cfbbedb1",
 			Db:        "myDb",
 			User:      "noah.gorstein@stardog.com",
 			StartTime: 1669949829376,
 			Status:    "RUNNING",
-      Progress: ProcessProgress{Max: 0, Current: 0, Stage: ""},
+			Progress:  ProcessProgress{Max: 0, Current: 0, Stage: ""},
 		}}
 	mux.HandleFunc("/admin/processes", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
@@ -124,9 +124,9 @@ func Test_GetProcess(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
-  processID := "c273226b-de41-407d-9343-6157cfbbedb1"
+	processID := "c273226b-de41-407d-9343-6157cfbbedb1"
 
-  processJSON := `{
+	processJSON := `{
     "type": "Transaction",
     "kernelId": "3d6d135c-6b12-48c8-aa22-4f955fa7bea9",
     "id": "c273226b-de41-407d-9343-6157cfbbedb1",
@@ -141,16 +141,16 @@ func Test_GetProcess(t *testing.T) {
     }
   }
   `
-  wantProcesses := &Process{	
-			Type:      "Transaction",
-      KernelID: "3d6d135c-6b12-48c8-aa22-4f955fa7bea9",
-			ID:        "c273226b-de41-407d-9343-6157cfbbedb1",
-			Db:        "myDb",
-			User:      "noah.gorstein@stardog.com",
-			StartTime: 1669949829376,
-			Status:    "RUNNING",
-      Progress: ProcessProgress{Max: 0, Current: 0, Stage: ""},
-		}
+	wantProcesses := &Process{
+		Type:      "Transaction",
+		KernelID:  "3d6d135c-6b12-48c8-aa22-4f955fa7bea9",
+		ID:        "c273226b-de41-407d-9343-6157cfbbedb1",
+		Db:        "myDb",
+		User:      "noah.gorstein@stardog.com",
+		StartTime: 1669949829376,
+		Status:    "RUNNING",
+		Progress:  ProcessProgress{Max: 0, Current: 0, Stage: ""},
+	}
 	mux.HandleFunc(fmt.Sprintf("/admin/processes/%s", processID), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
 		testHeader(t, r, "Accept", "application/json")
@@ -196,6 +196,6 @@ func Test_KillProcess(t *testing.T) {
 
 	const methodName = "KillProcess"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.ServerAdmin.KillProcess(nil, processID) 
+		return client.ServerAdmin.KillProcess(nil, processID)
 	})
 }

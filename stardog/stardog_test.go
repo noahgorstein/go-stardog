@@ -271,7 +271,7 @@ func TestBareDo_URLError(t *testing.T) {
 	defer teardown()
 
 	ctx := context.Background()
-  req, err := client.NewRequest("GET", "htp://hello", nil, nil)
+	req, err := client.NewRequest("GET", "htp://hello", nil, nil)
 	if err != nil {
 		t.Fatalf("client.NewRequest returned error: %v", err)
 	}
