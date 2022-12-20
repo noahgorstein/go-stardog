@@ -16,9 +16,9 @@ type TransactionService service
 // Stardog API docs: https://stardog-union.github.io/http-docs/#tag/Transactions/operation/beginTransaction
 func (s *TransactionService) Begin(ctx context.Context, database string) (string, *Response, error) {
 	u := fmt.Sprintf("%s/transaction/begin", database)
-  headerOpts := requestHeaderOptions{
-    Accept: mediaTypePlainText,
-  }
+	headerOpts := requestHeaderOptions{
+		Accept: mediaTypePlainText,
+	}
 	req, err := s.client.NewRequest(http.MethodPost, u, &headerOpts, nil)
 	if err != nil {
 		return "", nil, err
