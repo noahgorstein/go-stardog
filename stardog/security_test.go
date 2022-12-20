@@ -11,6 +11,20 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func newTrue() *bool {
+	b := true
+	return &b
+}
+
+func newFalse() *bool {
+	b := false
+	return &b
+}
+
+func newString(str string) *string {
+  return &str
+}
+
 func Test_GetUsers(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
