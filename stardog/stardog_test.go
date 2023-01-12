@@ -55,6 +55,24 @@ func setup() (client *Client, mux *http.ServeMux, serverURL string, teardown fun
 	return client, mux, server.URL, server.Close
 }
 
+func newTrue() *bool {
+	b := true
+	return &b
+}
+
+func newFalse() *bool {
+	b := false
+	return &b
+}
+
+func newString(str string) *string {
+	return &str
+}
+
+func newInt(i int) *int {
+	return &i
+}
+
 func TestNewClient(t *testing.T) {
 	c, _ := NewClient(DefaultServerURL, nil)
 
@@ -206,6 +224,23 @@ func testURLParseError(t *testing.T, err error) {
 	}
 	if err, ok := err.(*url.Error); !ok || err.Op != "parse" {
 		t.Errorf("Expected URL parse error, got %+v", err)
+	}
+}
+
+func TestNewMultipartFormDataRequest_badURL(t *testing.T) {
+	c, _ := NewClient(DefaultServerURL, nil)
+	headerOpts := requestHeaderOptions{
+		ContentType: "multipart/form-data 12345",
+	}
+	_, err := c.NewMultipartFormDataRequest("GET", ":", &headerOpts, nil)
+	testURLParseError(t, err)
+}
+
+func TestNewMultipartFormDataRequest_missingMultiPartFormHeader(t *testing.T) {
+	c, _ := NewClient(DefaultServerURL, nil)
+	_, err := c.NewMultipartFormDataRequest("GET", "hello/world", nil, nil)
+	if err == nil {
+		t.Error("NewMultipartFormDataRequest should throw an error if 'Content-Type' header doesn't contain 'multipart/form-data'")
 	}
 }
 
