@@ -4,10 +4,337 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+func Test_ExportData_server_side(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/%s/export", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", mediaTypePlainText)
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ctx := context.Background()
+
+	opts := &ExportDataOptions{
+		NamedGraph:  []string{"tag:stardog:api:context:default"},
+		Format:      Turtle,
+		ServerSide:  true,
+		Compression: BZ2,
+	}
+
+	_, _, err := client.DatabaseAdmin.ExportData(ctx, db, opts)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ExportData returned error: %v", err)
+	}
+
+	const methodName = "ExportData"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.DatabaseAdmin.ExportData(nil, db, opts)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func Test_ExportData_client_side(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+	returnedRDF :=
+		`
+    PREFIX : <http://stardog.com/tutorial/>
+
+    :The_Beatles      rdf:type  :Band .
+    :The_Beatles      :name     "The Beatles" .
+    :The_Beatles      :member   :John_Lennon .
+    :The_Beatles      :member   :Paul_McCartney .
+  `
+
+	mux.HandleFunc(fmt.Sprintf("/%s/export", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", string(Turtle))
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(returnedRDF))
+	})
+
+	ctx := context.Background()
+
+	opts := &ExportDataOptions{
+		NamedGraph: []string{"tag:stardog:api:context:default"},
+		Format:     Turtle,
+	}
+
+	got, _, err := client.DatabaseAdmin.ExportData(ctx, db, opts)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ExportData returned error: %v", err)
+	}
+
+	if want := returnedRDF; !cmp.Equal(got.String(), want) {
+		t.Errorf("DatabaseAdmin.ExportData = %+v, want %+v", got, want)
+	}
+
+	const methodName = "ExportData"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.DatabaseAdmin.ExportData(nil, db, opts)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func Test_ExportObfuscatedData_client_side(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+	returnedRDF :=
+		`
+    @prefix : <http://api.stardog.com/> .
+    @prefix stardog: <tag:stardog:api:> .
+    @prefix obf: <tag:stardog:api:obf:> .
+    @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+    @prefix owl: <http://www.w3.org/2002/07/owl#> .
+    @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    {
+      obf:c61219651e7f0bf78ef1ab754768a6eb1bd9d53df39aa5ef153fcf55b4f12b1f "1971-10-11"^^xsd:date ;
+      obf:9d57d43c21ec38ec19d5a782367aaa3f9ab92230068d71a68c73cc4b3c0670e9 obf:638a34f33c0ceb352ad944c901e924d64683bc99ea895ca0a9a8142bdecc72fe .
+    }
+  `
+
+	mux.HandleFunc(fmt.Sprintf("/%s/export", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", string(Trig))
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(returnedRDF))
+	})
+
+	ctx := context.Background()
+
+	opts := &ExportObfuscatedDataOptions{
+		NamedGraph: []string{"tag:stardog:api:context:default"},
+		Format:     Trig,
+	}
+
+	got, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, nil, opts)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ExportObfuscatedData returned error: %v", err)
+	}
+
+	if want := returnedRDF; !cmp.Equal(got.String(), want) {
+		t.Errorf("DatabaseAdmin.ExportObfuscatedData = %+v, want %+v", got, want)
+	}
+
+	const methodName = "ExportObfuscatedData"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.DatabaseAdmin.ExportObfuscatedData(nil, db, nil, opts)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func Test_ExportObfuscatedData_client_side_custom_obf_config(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+	returnedRDF :=
+		`
+    @prefix : <http://api.stardog.com/> .
+    @prefix stardog: <tag:stardog:api:> .
+    @prefix obf: <tag:stardog:api:obf:> .
+    @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+    @prefix owl: <http://www.w3.org/2002/07/owl#> .
+    @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    {
+      obf:c61219651e7f0bf78ef1ab754768a6eb1bd9d53df39aa5ef153fcf55b4f12b1f "1971-10-11"^^xsd:date ;
+      obf:9d57d43c21ec38ec19d5a782367aaa3f9ab92230068d71a68c73cc4b3c0670e9 obf:638a34f33c0ceb352ad944c901e924d64683bc99ea895ca0a9a8142bdecc72fe .
+    }
+  `
+
+	mux.HandleFunc(fmt.Sprintf("/%s/export", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "POST")
+		testHeader(t, r, "Accept", string(Turtle))
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(returnedRDF))
+	})
+
+	ctx := context.Background()
+
+	opts := &ExportObfuscatedDataOptions{
+		NamedGraph: []string{"tag:stardog:api:context:default"},
+		Format:     Turtle,
+	}
+
+	config, err := os.Open("./test-resources/obfuscation-config.ttl")
+	if err != nil {
+		t.Errorf("error opening the obfuscation configuration file")
+	}
+
+	got, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, config, opts)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ExportObfuscatedData returned error: %v", err)
+	}
+
+	if want := returnedRDF; !cmp.Equal(got.String(), want) {
+		t.Errorf("DatabaseAdmin.ExportObfuscatedData = %+v, want %+v", got, want)
+	}
+
+	const methodName = "ExportObfuscatedData"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.DatabaseAdmin.ExportObfuscatedData(nil, db, config, opts)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func Test_ExportObfuscatedData_server_side(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/%s/export", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", mediaTypePlainText)
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ctx := context.Background()
+
+	opts := &ExportObfuscatedDataOptions{
+		NamedGraph:  []string{"tag:stardog:api:context:default"},
+		Format:      Turtle,
+		ServerSide:  true,
+		Compression: BZ2,
+	}
+
+	_, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, nil, opts)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ExportObfuscatedData returned error: %v", err)
+	}
+
+	const methodName = "ExportObfuscatedData"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.DatabaseAdmin.ExportObfuscatedData(nil, db, nil, opts)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func Test_OnlineDatabase(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/admin/databases/%s/online", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "PUT")
+		testHeader(t, r, "Accept", mediaTypeApplicationJSON)
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ctx := context.Background()
+	_, err := client.DatabaseAdmin.OnlineDatabase(ctx, db)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.OnlineDatabase returned error: %v", err)
+	}
+
+	const methodName = "OnlineDatabase"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		return client.DatabaseAdmin.OnlineDatabase(nil, db)
+	})
+}
+
+func Test_OfflineDatabase(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/admin/databases/%s/offline", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "PUT")
+		testHeader(t, r, "Accept", mediaTypeApplicationJSON)
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ctx := context.Background()
+	_, err := client.DatabaseAdmin.OfflineDatabase(ctx, db)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.OfflineDatabase returned error: %v", err)
+	}
+
+	const methodName = "OfflineDatabase"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		return client.DatabaseAdmin.OfflineDatabase(nil, db)
+	})
+}
+
+func Test_GenerateDataModel(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+	dataModel :=
+		`
+  PREFIX catalog: <tag:stardog:api:catalog:>
+  PREFIX dcat: <http://www.w3.org/ns/dcat#>
+  PREFIX r2rml: <http://www.w3.org/ns/r2rml#>
+
+  # A database table column.
+  Class catalog:Column extends dcat:Resource
+          catalog:columnName xsd:string
+          catalog:columnType xsd:string
+  `
+
+	mux.HandleFunc(fmt.Sprintf("/%s/model", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		w.Write([]byte(dataModel))
+	})
+
+	ctx := context.Background()
+	opts := &GenerateDataModelOptions{
+		Reasoning: true,
+		Output:    "text",
+	}
+	got, _, err := client.DatabaseAdmin.GenerateDataModel(ctx, db, opts)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.GenerateDataModel returned error: %v", err)
+	}
+	if want := dataModel; !cmp.Equal(got.String(), want) {
+		t.Errorf("DatabaseAdmin.GenerateDataModel = %+v, want %+v", got, want)
+	}
+
+	const methodName = "GenerateDataModel"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.DatabaseAdmin.GenerateDataModel(nil, db, opts)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
 
 func Test_CreateDatabase(t *testing.T) {
 	client, mux, _, teardown := setup()
@@ -246,6 +573,187 @@ func Test_GetAllDatabaseOptionsDetails(t *testing.T) {
 	})
 }
 
+func Test_GetNamespaces(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	var namespacesJSON = []byte(
+		`
+    { "namespaces": [
+      {
+        "prefix": "",
+        "name": "http://stardog.com/tutorial/"
+      },
+      {
+        "prefix": "schema",
+        "name": "http://schema.org/"
+      },
+      {
+        "prefix": "stardog",
+        "name": "tag:stardog:api:"
+      }
+    ]}
+    `)
+	wantNamespaces := []Namespace{
+		{
+			Prefix: "",
+			Name:   "http://stardog.com/tutorial/",
+		},
+		{
+			Prefix: "schema",
+			Name:   "http://schema.org/",
+		},
+		{
+			Prefix: "stardog",
+			Name:   "tag:stardog:api:",
+		},
+	}
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/%s/namespaces", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", mediaTypeApplicationJSON)
+		w.WriteHeader(http.StatusOK)
+		w.Write(namespacesJSON)
+	})
+
+	ctx := context.Background()
+	got, _, err := client.DatabaseAdmin.GetNamespaces(ctx, db)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.GetNamespaces returned error: %v", err)
+	}
+	if want := wantNamespaces; !cmp.Equal(got, want) {
+		t.Errorf("DatabaseAdmin.GetNamespaces = %+v, want %+v", got, want)
+	}
+
+	const methodName = "GetNamespaces"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.DatabaseAdmin.GetNamespaces(nil, db)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func Test_ImportNamespaces(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+
+	importNamespacesResponseJSON := `
+  {
+    "numImportedNamespaces": 1,
+    "namespaces": [
+      "\u003dhttp://stardog.com/tutorial/",
+      "schema\u003dhttp://schema.org/",
+      "stardog\u003dtag:stardog:api:"
+    ]
+  }
+  `
+	wantImportNamespacesResponse := &ImportNamespacesResponse{
+		NumberImportedNamespaces: 1,
+		UpdatedNamespaces: []string{
+			"=http://stardog.com/tutorial/",
+			"schema=http://schema.org/",
+			"stardog=tag:stardog:api:",
+		},
+	}
+
+	rdf, err := os.Open("./test-resources/music_schema.ttl")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	mux.HandleFunc(fmt.Sprintf("/%s/namespaces", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "POST")
+		testHeader(t, r, "Accept", mediaTypeApplicationJSON)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(importNamespacesResponseJSON))
+	})
+
+	ctx := context.Background()
+	got, _, err := client.DatabaseAdmin.ImportNamespaces(ctx, db, rdf)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces returned error: %v", err)
+	}
+	if want := wantImportNamespacesResponse; !cmp.Equal(got, want) {
+		t.Errorf("DatabaseAdmin.ImportNamespaces = %+v, want %+v", got, want)
+	}
+
+	const methodName = "ImportNamespaces"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.DatabaseAdmin.ImportNamespaces(nil, db, rdf)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func Test_GetDatabaseOptions(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	var databaseOptionsJSON = []byte(`{"search.enabled": true}`)
+	var wantDatabasOptions = map[string]interface{}{"search.enabled": true}
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/admin/databases/%s/options", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "PUT")
+		testHeader(t, r, "Accept", mediaTypeApplicationJSON)
+		w.WriteHeader(http.StatusOK)
+		w.Write(databaseOptionsJSON)
+	})
+
+	ctx := context.Background()
+	opts := []string{"search.enabled"}
+	got, _, err := client.DatabaseAdmin.GetDatabaseOptions(ctx, db, opts)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.GetDatabaseOptions returned error: %v", err)
+	}
+	if want := wantDatabasOptions; !cmp.Equal(got, want) {
+		t.Errorf("DatabaseAdmin.GetDatabaseOptions = %+v, want %+v", got, want)
+	}
+
+	const methodName = "GetDatabaseOptions"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.DatabaseAdmin.GetDatabaseOptions(nil, db, opts)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func Test_SetDatabaseOptions(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/admin/databases/%s/options", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "POST")
+		testHeader(t, r, "Content-Type", mediaTypeApplicationJSON)
+		testBody(t, r, `{"search.enabled":true}`+"\n")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ctx := context.Background()
+	opts := map[string]interface{}{"search.enabled": true}
+	_, err := client.DatabaseAdmin.SetDatabaseOptions(ctx, db, opts)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.SetDatabaseOptions returned error: %v", err)
+	}
+	const methodName = "SetDatabaseOptions"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		return client.DatabaseAdmin.SetDatabaseOptions(nil, db, opts)
+	})
+}
+
 func Test_GetDatabases(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
@@ -279,11 +787,11 @@ func Test_GetDatabases(t *testing.T) {
 	})
 }
 
-func Test_GetDatabaseWithOptions(t *testing.T) {
+func Test_GetAllDatabaseOptions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
-	var databasesWithOptionsJSON = []byte(`
+	var databaseOptionsJSON = []byte(`
   {
     "optimize.vacuum.data": true,
     "index.dictionary.compress.literal": 2048,
@@ -320,7 +828,7 @@ func Test_GetDatabaseWithOptions(t *testing.T) {
     "reasoning.schemas.memory.count": 5,
     "index.last.tx": "0329f741-228f-460d-88b3-1e78065e3793"
   }`)
-	var wantDatabases = map[string]interface{}{
+	var wantDatabaseOptions = map[string]interface{}{
 		"optimize.vacuum.data":                 true,
 		"index.dictionary.compress.literal":    2048,
 		"search.version":                       3,
@@ -361,21 +869,21 @@ func Test_GetDatabaseWithOptions(t *testing.T) {
 		testMethod(t, r, "GET")
 		testHeader(t, r, "Accept", mediaTypeApplicationJSON)
 		w.WriteHeader(http.StatusOK)
-		w.Write(databasesWithOptionsJSON)
+		w.Write(databaseOptionsJSON)
 	})
 
 	ctx := context.Background()
-	got, _, err := client.DatabaseAdmin.GetDatabaseWithOptions(ctx, "db1")
+	got, _, err := client.DatabaseAdmin.GetAllDatabaseOptions(ctx, "db1")
 	if err != nil {
-		t.Errorf("DatabaseAdmin.GetDatabaseWithOptions returned error: %v", err)
+		t.Errorf("DatabaseAdmin.GetAllDatabaseOptions returned error: %v", err)
 	}
-	if want := wantDatabases; !cmp.Equal(len(got), len(want)) {
-		t.Errorf("DatabaseAdmin.GetDatabaseWithOptions returned map with length %+v, want %+v", got, want)
+	if want := wantDatabaseOptions; !cmp.Equal(len(got), len(want)) {
+		t.Errorf("DatabaseAdmin.GetAllDatabaseOptions returned map with length %+v, want %+v", got, want)
 	}
 
-	const methodName = "GetDatabaseWithOptions"
+	const methodName = "GetAllDatabaseOptions"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.GetDatabaseWithOptions(nil, "db1")
+		got, resp, err := client.DatabaseAdmin.GetAllDatabaseOptions(nil, "db1")
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}

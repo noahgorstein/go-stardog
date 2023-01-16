@@ -129,6 +129,17 @@ func testHeader(t *testing.T, r *http.Request, header string, want string) {
 	}
 }
 
+func testBody(t *testing.T, r *http.Request, want string) {
+	t.Helper()
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		t.Errorf("Error reading request body: %v", err)
+	}
+	if got := string(b); got != want {
+		t.Errorf("request Body is %s, want %s", got, want)
+	}
+}
+
 // Test function under NewRequest failure and then s.client.Do failure.
 // Method f should be a regular call that would normally succeed, but
 // should return an error when NewRequest or s.client.Do fails.
@@ -174,7 +185,8 @@ func TestNewRequest(t *testing.T) {
 	inURL, outURL := "/foo", DefaultServerURL+"foo"
 	inBody, outBody := &isEnabledResponse{Enabled: true}, `{"enabled":true}`+"\n"
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJSON,
+		ContentType: mediaTypeApplicationJSON,
+		Accept:      mediaTypeApplicationJSON,
 	}
 	req, _ := c.NewRequest("GET", inURL, &headerOpts, inBody)
 

@@ -6,17 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/go-querystring/query"
 	"io"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strings"
+
+	"github.com/google/go-querystring/query"
 )
 
 const (
 	DefaultServerURL = "http://localhost:5820/"
 	defaultUserAgent = "stardog-go"
+	forwardSlash     = "/"
 )
 
 var errNonNilContext = errors.New("context must be non-nil")
@@ -84,8 +86,8 @@ func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !strings.HasSuffix(serverEndpoint.Path, "/") {
-		serverEndpoint.Path += "/"
+	if !strings.HasSuffix(serverEndpoint.Path, forwardSlash) {
+		serverEndpoint.Path += forwardSlash
 	}
 
 	c := &Client{client: httpClient, BaseURL: serverEndpoint, UserAgent: defaultUserAgent}
@@ -98,7 +100,7 @@ func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
 }
 
 func (c *Client) NewMultipartFormDataRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
-	if !strings.HasSuffix(c.BaseURL.Path, "/") {
+	if !strings.HasSuffix(c.BaseURL.Path, forwardSlash) {
 		//revive:disable-next-line:error-strings
 		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.BaseURL)
 	}
@@ -122,7 +124,7 @@ func (c *Client) NewMultipartFormDataRequest(method string, urlStr string, heade
 }
 
 func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
-	if !strings.HasSuffix(c.BaseURL.Path, "/") {
+	if !strings.HasSuffix(c.BaseURL.Path, forwardSlash) {
 		//revive:disable-next-line:error-strings
 		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.BaseURL)
 	}
@@ -135,11 +137,21 @@ func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHea
 	var buf io.ReadWriter
 	if body != nil {
 		buf = &bytes.Buffer{}
-		enc := json.NewEncoder(buf)
-		enc.SetEscapeHTML(false)
-		err := enc.Encode(body)
-		if err != nil {
-			return nil, err
+		if headerOpts != nil {
+			switch headerOpts.ContentType {
+			case mediaTypeApplicationJSON:
+				enc := json.NewEncoder(buf)
+				enc.SetEscapeHTML(false)
+				err := enc.Encode(body)
+				if err != nil {
+					return nil, err
+				}
+			default:
+				bodyBuf, ok := body.(*bytes.Buffer)
+				if ok {
+					buf = bodyBuf
+				}
+			}
 		}
 	}
 
