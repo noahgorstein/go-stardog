@@ -16,26 +16,26 @@ import (
 
 func main() {
 	r := bufio.NewReader(os.Stdin)
-  fmt.Print("Endpoint (leave empty for http://localhost:5820): ")
+	fmt.Print("Endpoint (leave empty for http://localhost:5820): ")
 	endpoint, _ := r.ReadString('\n')
 	endpoint = strings.TrimSpace(endpoint)
-  if endpoint == "" {
-    endpoint = "http://localhost:5820"
-  }
+	if endpoint == "" {
+		endpoint = "http://localhost:5820"
+	}
 
 	fmt.Print("Username (leave empty for admin): ")
 	username, _ := r.ReadString('\n')
-  username = strings.TrimSpace(username)
-  if username == "" {
-    username = "admin"
-  }
+	username = strings.TrimSpace(username)
+	if username == "" {
+		username = "admin"
+	}
 
 	fmt.Print("Password (leave empty for admin): ")
 	bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 	password := string(bytePassword)
-  if password == "" {
-    password = "admin"
-  }
+	if password == "" {
+		password = "admin"
+	}
 	fmt.Println()
 
 	basicAuthTransport := stardog.BasicAuthTransport{
@@ -64,21 +64,21 @@ func main() {
 	database = strings.TrimSpace(database)
 
 	opts := &stardog.ExportObfuscatedDataOptions{
-    NamedGraph: []string{"tag:stardog:api:context:default"},
-    Format: stardog.Trig,
+		NamedGraph: []string{"tag:stardog:api:context:default"},
+		Format:     stardog.Trig,
 	}
 
-  obfuscationConfig, err := os.Open("obfuscation-config.ttl")
-  if err != nil {
-    fmt.Println(err)
-    os.Exit(1)
-  }
+	obfuscationConfig, err := os.Open("obfuscation-config.ttl")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
-  err = obfuscationConfig.Close()
-  if err != nil {
-    fmt.Println(err)
-    os.Exit(1)
-  }
+	err = obfuscationConfig.Close()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	buf, _, err := client.DatabaseAdmin.ExportObfuscatedData(context.Background(), database, nil, opts)
 	if err != nil {
@@ -91,7 +91,7 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("Successfully exported database: \"%s\"\n", database)
-  fmt.Println("-------OBFUSCATED DATA-------")
+	fmt.Println("-------OBFUSCATED DATA-------")
 	if buf != nil {
 		fmt.Println(buf.String())
 	}

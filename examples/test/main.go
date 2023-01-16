@@ -13,7 +13,7 @@ func main() {
 		Username: "noah.gorstein@stardog.com",
 		Password: "RinaBardin51!",
 	}
-  client, _ := stardog.NewClient("https://sd-deba99d4.stardog.cloud:5820", basicAuth.Client())
+	client, _ := stardog.NewClient("https://sd-deba99d4.stardog.cloud:5820", basicAuth.Client())
 
 	dbOpts := map[string]interface{}{
 		"spatial.enabled": true,
@@ -29,7 +29,7 @@ func main() {
 		},
 	}
 	dbs, _, _ := client.DatabaseAdmin.GetDatabases(context.Background())
-  fmt.Println(dbs)
+	fmt.Println(dbs)
 	for _, db := range dbs {
 		if db == os.Args[1] {
 			fmt.Printf("dropping database: %s\n", os.Args[1])
@@ -47,7 +47,7 @@ func main() {
 		}
 	}
 
-  _, err := client.DatabaseAdmin.CreateDatabase(context.Background(), os.Args[1], datasets, dbOpts, false)
+	_, err := client.DatabaseAdmin.CreateDatabase(context.Background(), os.Args[1], datasets, dbOpts, false)
 	if err != nil {
 		stardogErr, ok := err.(*stardog.ErrorResponse)
 		if ok {

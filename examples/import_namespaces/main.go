@@ -70,7 +70,7 @@ func main() {
 		os.Exit(1)
 	}
 
-  importNamespacesResponse, _, err := client.DatabaseAdmin.ImportNamespaces(context.Background(), database, rdfFile)
+	importNamespacesResponse, _, err := client.DatabaseAdmin.ImportNamespaces(context.Background(), database, rdfFile)
 	if err != nil {
 		fmt.Printf("Unable to export database \"%s\"\n", database)
 		if checkStardogError(err) {
@@ -80,14 +80,14 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-  fmt.Println()
+	fmt.Println()
 	fmt.Printf("Successfully imported namespace into database: \"%s\"\n", database)
-  fmt.Printf("Number of namespaces imported: %d\n", importNamespacesResponse.NumberImportedNamespaces)
-  fmt.Println("-------Updated Namespaces------")
-  for _, ns := range importNamespacesResponse.UpdatedNamespaces {
-    fmt.Println(ns)
-  }
-  
+	fmt.Printf("Number of namespaces imported: %d\n", importNamespacesResponse.NumberImportedNamespaces)
+	fmt.Println("-------Updated Namespaces------")
+	for _, ns := range importNamespacesResponse.UpdatedNamespaces {
+		fmt.Println(ns)
+	}
+
 }
 
 func checkStardogError(err error) bool {

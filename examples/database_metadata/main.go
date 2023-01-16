@@ -68,7 +68,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("Unable to offline database \"%s\"\n", database)
 		if !checkStardogError(err) {
-		  fmt.Println(err)
+			fmt.Println(err)
 		}
 	}
 	fmt.Println("Database offlined successfully.")
@@ -103,7 +103,7 @@ func main() {
 	for key, value := range opts {
 		fmt.Printf("OPTION: %s | VALUE: %v\n", key, value)
 	}
-  fmt.Println("----------------")
+	fmt.Println("----------------")
 
 	fmt.Printf("Onlining the database %s\n", database)
 	_, err = client.DatabaseAdmin.OnlineDatabase(context.Background(), database)
