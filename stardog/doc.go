@@ -29,13 +29,13 @@ can be used as a starting point.
 
 For more sample code snippets, head over to the https://github.com/noahgorstein/go-stardog/tree/main/examples directory.
 
-# Authentication
+## Authentication
 
 The go-stardog library does not directly handle authentication. Instead, when
 creating a new client, pass an http.Client that can handle authentication for
 you.
 
-## Basic Authentication
+### Basic Authentication
 
 For users who wish to authenticate via username and password (HTTP Basic Authentication), use the BasicAuthTransport
 
@@ -54,7 +54,7 @@ For users who wish to authenticate via username and password (HTTP Basic Authent
 	  users, _, err := client.Security.GetUsers(ctx)
 	}
 
-## Token Authentication
+### Token Authentication
 
 For users who wish to authenticate via an access token (Bearer Authentication), use the BearerAuthTransport
 

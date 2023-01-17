@@ -50,15 +50,33 @@ func setup() (client *Client, mux *http.ServeMux, serverURL string, teardown fun
 	// configured to use test server.
 	client, _ = NewClient(DefaultServerURL, nil)
 	url, _ := url.Parse(server.URL + baseURLPath + "/")
-	client.BaseURL = url
+	client.baseURL = url
 
 	return client, mux, server.URL, server.Close
+}
+
+func newTrue() *bool {
+	b := true
+	return &b
+}
+
+func newFalse() *bool {
+	b := false
+	return &b
+}
+
+func newString(str string) *string {
+	return &str
+}
+
+func newInt(i int) *int {
+	return &i
 }
 
 func TestNewClient(t *testing.T) {
 	c, _ := NewClient(DefaultServerURL, nil)
 
-	if got, want := c.BaseURL.String(), DefaultServerURL; got != want {
+	if got, want := c.baseURL.String(), DefaultServerURL; got != want {
 		t.Errorf("NewClient BaseURL is %v, want %v", got, want)
 	}
 	if got, want := c.UserAgent, defaultUserAgent; got != want {
@@ -75,7 +93,7 @@ func TestNewClient_trailingSlashServerURL(t *testing.T) {
 	serverURL := "http://localhost:5821"
 	c, _ := NewClient(serverURL, nil)
 
-	if got, want := c.BaseURL.String(), fmt.Sprintf("%v/", serverURL); got != want {
+	if got, want := c.baseURL.String(), fmt.Sprintf("%v/", serverURL); got != want {
 		t.Errorf("NewClient BaseURL is %v, want %v", got, want)
 	}
 }
@@ -111,6 +129,17 @@ func testHeader(t *testing.T, r *http.Request, header string, want string) {
 	}
 }
 
+func testBody(t *testing.T, r *http.Request, want string) {
+	t.Helper()
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		t.Errorf("Error reading request body: %v", err)
+	}
+	if got := string(b); got != want {
+		t.Errorf("request Body is %s, want %s", got, want)
+	}
+}
+
 // Test function under NewRequest failure and then s.client.Do failure.
 // Method f should be a regular call that would normally succeed, but
 // should return an error when NewRequest or s.client.Do fails.
@@ -122,7 +151,7 @@ func testNewRequestAndDoFailure(t *testing.T, methodName string, client *Client,
 
 	// invalid BaseURL (i.e. one without a trailing slash)
 	// this will make NewRequest fail
-	client.BaseURL.Path = ""
+	client.baseURL.Path = ""
 	resp, err := f()
 	if resp != nil {
 		t.Errorf("client.BaseURL.Path='' %v resp = %#v, want nil", methodName, resp)
@@ -131,7 +160,7 @@ func testNewRequestAndDoFailure(t *testing.T, methodName string, client *Client,
 		t.Errorf("client.BaseURL.Path='' %v err = nil, want error", methodName)
 	}
 
-	client.BaseURL.Path = baseURLPath + "/"
+	client.baseURL.Path = baseURLPath + "/"
 	resp, err = f()
 	if err == nil {
 		t.Errorf("%v err = nil, want error", methodName)
@@ -156,7 +185,8 @@ func TestNewRequest(t *testing.T) {
 	inURL, outURL := "/foo", DefaultServerURL+"foo"
 	inBody, outBody := &isEnabledResponse{Enabled: true}, `{"enabled":true}`+"\n"
 	headerOpts := requestHeaderOptions{
-		Accept: mediaTypeApplicationJSON,
+		ContentType: mediaTypeApplicationJSON,
+		Accept:      mediaTypeApplicationJSON,
 	}
 	req, _ := c.NewRequest("GET", inURL, &headerOpts, inBody)
 
@@ -206,6 +236,23 @@ func testURLParseError(t *testing.T, err error) {
 	}
 	if err, ok := err.(*url.Error); !ok || err.Op != "parse" {
 		t.Errorf("Expected URL parse error, got %+v", err)
+	}
+}
+
+func TestNewMultipartFormDataRequest_badURL(t *testing.T) {
+	c, _ := NewClient(DefaultServerURL, nil)
+	headerOpts := requestHeaderOptions{
+		ContentType: "multipart/form-data 12345",
+	}
+	_, err := c.NewMultipartFormDataRequest("GET", ":", &headerOpts, nil)
+	testURLParseError(t, err)
+}
+
+func TestNewMultipartFormDataRequest_missingMultiPartFormHeader(t *testing.T) {
+	c, _ := NewClient(DefaultServerURL, nil)
+	_, err := c.NewMultipartFormDataRequest("GET", "hello/world", nil, nil)
+	if err == nil {
+		t.Error("NewMultipartFormDataRequest should throw an error if 'Content-Type' header doesn't contain 'multipart/form-data'")
 	}
 }
 
@@ -401,7 +448,7 @@ func TestBasicAuthTransport(t *testing.T) {
 		Password: password,
 	}
 	basicAuthClient, _ := NewClient(DefaultServerURL, tp.Client())
-	basicAuthClient.BaseURL = client.BaseURL
+	basicAuthClient.baseURL = client.baseURL
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
@@ -456,7 +503,7 @@ func TestBearerAuthTransport(t *testing.T) {
 		BearerToken: "12345",
 	}
 	bearerAuthClient, _ := NewClient(DefaultServerURL, tp.Client())
-	bearerAuthClient.BaseURL = client.BaseURL
+	bearerAuthClient.baseURL = client.baseURL
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}

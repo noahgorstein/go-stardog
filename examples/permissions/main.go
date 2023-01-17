@@ -16,16 +16,26 @@ import (
 
 func main() {
 	r := bufio.NewReader(os.Stdin)
-	fmt.Print("Endpoint: ")
+	fmt.Print("Endpoint (leave empty for http://localhost:5820): ")
 	endpoint, _ := r.ReadString('\n')
 	endpoint = strings.TrimSpace(endpoint)
+	if endpoint == "" {
+		endpoint = "http://localhost:5820"
+	}
 
-	fmt.Print("Username: ")
+	fmt.Print("Username (leave empty for admin): ")
 	username, _ := r.ReadString('\n')
+	username = strings.TrimSpace(username)
+	if username == "" {
+		username = "admin"
+	}
 
-	fmt.Print("Password: ")
+	fmt.Print("Password (leave empty for admin): ")
 	bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 	password := string(bytePassword)
+	if password == "" {
+		password = "admin"
+	}
 	fmt.Println()
 
 	fmt.Print("Role to create: ")

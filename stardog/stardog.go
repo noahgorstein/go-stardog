@@ -6,17 +6,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/go-querystring/query"
 	"io"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strings"
+
+	"github.com/google/go-querystring/query"
 )
 
 const (
+	forwardSlash = "/"
+
+	Version          = "v0.4.0"
 	DefaultServerURL = "http://localhost:5820/"
-	defaultUserAgent = "stardog-go"
+	defaultUserAgent = "stardog-go" + forwardSlash + Version
 )
 
 var errNonNilContext = errors.New("context must be non-nil")
@@ -25,15 +29,15 @@ var errNonNilContext = errors.New("context must be non-nil")
 type Client struct {
 	client    *http.Client
 	UserAgent string
-	Username  string
-	BaseURL   *url.URL
+	baseURL   *url.URL
 
 	common service
 
 	//Services for talking to different parts of the Stardog API
-	Security    *SecurityService
-	ServerAdmin *ServerAdminService
-	Transaction *TransactionService
+	DatabaseAdmin *DatabaseAdminService
+	Security      *SecurityService
+	ServerAdmin   *ServerAdminService
+	Transaction   *TransactionService
 }
 
 // Client returns the http.Client used by this Stardog client.
@@ -83,25 +87,50 @@ func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !strings.HasSuffix(serverEndpoint.Path, "/") {
-		serverEndpoint.Path += "/"
+	if !strings.HasSuffix(serverEndpoint.Path, forwardSlash) {
+		serverEndpoint.Path += forwardSlash
 	}
 
-	c := &Client{client: httpClient, BaseURL: serverEndpoint, UserAgent: defaultUserAgent}
+	c := &Client{client: httpClient, baseURL: serverEndpoint, UserAgent: defaultUserAgent}
 	c.common.client = c
+	c.DatabaseAdmin = (*DatabaseAdminService)(&c.common)
 	c.Security = (*SecurityService)(&c.common)
 	c.ServerAdmin = (*ServerAdminService)(&c.common)
 	c.Transaction = (*TransactionService)(&c.common)
 	return c, nil
 }
 
-func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
-	if !strings.HasSuffix(c.BaseURL.Path, "/") {
+func (c *Client) NewMultipartFormDataRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
+	if !strings.HasSuffix(c.baseURL.Path, forwardSlash) {
 		//revive:disable-next-line:error-strings
-		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.BaseURL)
+		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.baseURL)
 	}
 
-	u, err := c.BaseURL.Parse(urlStr)
+	u, err := c.baseURL.Parse(urlStr)
+	if err != nil {
+		return nil, err
+	}
+	if body != nil && headerOpts != nil {
+		if strings.Contains(headerOpts.ContentType, "multipart/form-data") {
+			buf, ok := body.(*bytes.Buffer)
+			if ok {
+				reader := strings.NewReader(buf.String())
+				req, err := http.NewRequest(method, u.String(), reader)
+				req.Header.Set("Content-Type", headerOpts.ContentType)
+				return req, err
+			}
+		}
+	}
+	return nil, errors.New("Missing 'Content-Type multipart/form-data' header")
+}
+
+func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
+	if !strings.HasSuffix(c.baseURL.Path, forwardSlash) {
+		//revive:disable-next-line:error-strings
+		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.baseURL)
+	}
+
+	u, err := c.baseURL.Parse(urlStr)
 	if err != nil {
 		return nil, err
 	}
@@ -109,11 +138,21 @@ func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHea
 	var buf io.ReadWriter
 	if body != nil {
 		buf = &bytes.Buffer{}
-		enc := json.NewEncoder(buf)
-		enc.SetEscapeHTML(false)
-		err := enc.Encode(body)
-		if err != nil {
-			return nil, err
+		if headerOpts != nil {
+			switch headerOpts.ContentType {
+			case mediaTypeApplicationJSON:
+				enc := json.NewEncoder(buf)
+				enc.SetEscapeHTML(false)
+				err := enc.Encode(body)
+				if err != nil {
+					return nil, err
+				}
+			default:
+				bodyBuf, ok := body.(*bytes.Buffer)
+				if ok {
+					buf = bodyBuf
+				}
+			}
 		}
 	}
 
@@ -231,7 +270,11 @@ func addOptions(s string, opts interface{}) (string, error) {
 		return s, err
 	}
 
-	u.RawQuery = qs.Encode()
+	if u.RawQuery != "" {
+		u.RawQuery = u.RawQuery + "&" + qs.Encode()
+	} else {
+		u.RawQuery = qs.Encode()
+	}
 	return u.String(), nil
 }
 
