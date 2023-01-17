@@ -16,7 +16,7 @@ type ProcessProgress struct {
 	Stage   string `json:"stage"`
 }
 
-// Process represent a Stardog server progress
+// Process represent a Stardog server process
 type Process struct {
 	Type      string          `json:"type"`
 	KernelID  string          `json:"kernelId"`

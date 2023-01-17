@@ -63,24 +63,21 @@ func main() {
 	database, _ := r.ReadString('\n')
 	database = strings.TrimSpace(database)
 
-	opts := &stardog.ExportObfuscatedDataOptions{
-		NamedGraph: []string{"tag:stardog:api:context:default"},
-		Format:     stardog.Trig,
-	}
-
 	obfuscationConfig, err := os.Open("obfuscation-config.ttl")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = obfuscationConfig.Close()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	defer obfuscationConfig.Close()
+
+	opts := &stardog.ExportObfuscatedDataOptions{
+		NamedGraph:        []string{"tag:stardog:api:context:default"},
+		Format:            stardog.Trig,
+		ObfuscationConfig: obfuscationConfig,
 	}
 
-	buf, _, err := client.DatabaseAdmin.ExportObfuscatedData(context.Background(), database, nil, opts)
+	buf, _, err := client.DatabaseAdmin.ExportObfuscatedData(context.Background(), database, opts)
 	if err != nil {
 		fmt.Printf("Unable to export database \"%s\"\n", database)
 		if checkStardogError(err) {

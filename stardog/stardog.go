@@ -16,9 +16,11 @@ import (
 )
 
 const (
+	forwardSlash = "/"
+
+	Version          = "v0.4.0"
 	DefaultServerURL = "http://localhost:5820/"
-	defaultUserAgent = "stardog-go"
-	forwardSlash     = "/"
+	defaultUserAgent = "stardog-go" + forwardSlash + Version
 )
 
 var errNonNilContext = errors.New("context must be non-nil")
@@ -27,8 +29,7 @@ var errNonNilContext = errors.New("context must be non-nil")
 type Client struct {
 	client    *http.Client
 	UserAgent string
-	Username  string
-	BaseURL   *url.URL
+	baseURL   *url.URL
 
 	common service
 
@@ -90,7 +91,7 @@ func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
 		serverEndpoint.Path += forwardSlash
 	}
 
-	c := &Client{client: httpClient, BaseURL: serverEndpoint, UserAgent: defaultUserAgent}
+	c := &Client{client: httpClient, baseURL: serverEndpoint, UserAgent: defaultUserAgent}
 	c.common.client = c
 	c.DatabaseAdmin = (*DatabaseAdminService)(&c.common)
 	c.Security = (*SecurityService)(&c.common)
@@ -100,12 +101,12 @@ func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
 }
 
 func (c *Client) NewMultipartFormDataRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
-	if !strings.HasSuffix(c.BaseURL.Path, forwardSlash) {
+	if !strings.HasSuffix(c.baseURL.Path, forwardSlash) {
 		//revive:disable-next-line:error-strings
-		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.BaseURL)
+		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.baseURL)
 	}
 
-	u, err := c.BaseURL.Parse(urlStr)
+	u, err := c.baseURL.Parse(urlStr)
 	if err != nil {
 		return nil, err
 	}
@@ -124,12 +125,12 @@ func (c *Client) NewMultipartFormDataRequest(method string, urlStr string, heade
 }
 
 func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
-	if !strings.HasSuffix(c.BaseURL.Path, forwardSlash) {
+	if !strings.HasSuffix(c.baseURL.Path, forwardSlash) {
 		//revive:disable-next-line:error-strings
-		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.BaseURL)
+		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.baseURL)
 	}
 
-	u, err := c.BaseURL.Parse(urlStr)
+	u, err := c.baseURL.Parse(urlStr)
 	if err != nil {
 		return nil, err
 	}

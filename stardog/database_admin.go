@@ -22,22 +22,46 @@ type GetDatabaseSizeOptions struct {
 	Exact bool `url:"exact"`
 }
 
-type getDatabasesWithOptionsResponse struct {
-	Databases []map[string]interface{} `json:"databases"`
+// GenerateDataModelOutputFormat represents an output format for DatabaseAdminService.GenerateDataModel
+type GenerateDataModelOutputFormat string
+
+const (
+	Text    GenerateDataModelOutputFormat = "text"
+	OWL     GenerateDataModelOutputFormat = "owl"
+	SHACL   GenerateDataModelOutputFormat = "shacl"
+	SQL     GenerateDataModelOutputFormat = "sql"
+	GraphQL GenerateDataModelOutputFormat = "graphql"
+)
+
+// ImportNamespacesResponse contains information returned
+// after DatabaseAdminService.ImportNamespaces completed successfully.
+type ImportNamespacesResponse struct {
+	NumberImportedNamespaces int      `json:"numImportedNamespaces"`
+	UpdatedNamespaces        []string `json:"namespaces"`
 }
 
-type getDatabasesResponse struct {
-	Databases []string `json:"databases"`
+// GenerateDataModelOptions are options for the DatabaseAdminService.GenerateDataModel method
+type GenerateDataModelOptions struct {
+	// Enable reasoning
+	Reasoning bool `url:"reasoning,omitempty"`
+
+	// Desired output format
+	Output GenerateDataModelOutputFormat `url:"output,omitempty"`
+}
+
+// RestoreDatabaseOptions are options for the DatabaseAdminService.RestoreDatabase method
+type RestoreDatabaseOptions struct {
+	// Whether or not to overwrite an existing database with this backup
+	Force bool `url:"force,omitempty"`
+
+	// The name of the restored database, if different
+	Name string `url:"name,omitempty"`
 }
 
 // Namespace represents a namespace
 type Namespace struct {
 	Prefix string `json:"prefix"`
 	Name   string `json:"name"`
-}
-
-type getNamespaceResponse struct {
-	Namespaces []Namespace `json:"namespaces"`
 }
 
 // DatabaseOptionDetails represents a database configuration option's details.
@@ -53,7 +77,72 @@ type DatabaseOptionDetails struct {
 	DefaultValue      interface{} `json:"defaultValue"`
 }
 
-// GetDatabaseOptions returns the value of specific metadata options opts for a database.
+type Dataset struct {
+	// Path to the file to be uploaded to the server
+	Path string
+	// The optional named-graph (A.K.A context) for the data contained in the file to be added to.
+	NamedGraph string
+}
+
+// ExportDataOptions specifies the optional parameters to the DatabaseAdmin.ExportData method.
+type ExportDataOptions struct {
+	// The named graph(s) to export from the dataset
+	NamedGraph []string `url:"named-graph-uri"`
+
+	// The RDF format for the exported data
+	Format RDFFormat `url:"format,omitempty"`
+
+	// Compression format for the exported data. **Only applicable if data is exported ServerSide**
+	Compression Compression `url:"compression,omitempty"`
+
+	// Export the data to the server
+	ServerSide bool `url:"server-side,omitempty"`
+}
+
+// ExportObfuscatedDataOptions specifies the optional parameters to the DatabaseAdmin.ExportObfuscatedData method.
+type ExportObfuscatedDataOptions struct {
+	// The named graph(s) to export from the dataset
+	NamedGraph []string `url:"named-graph-uri"`
+
+	// The RDF format for the exported data
+	Format RDFFormat `url:"format,omitempty"`
+
+	// Compression format for the exported data. **Only applicable if data is exported ServerSide**
+	Compression Compression `url:"compression,omitempty"`
+
+	// Export the data to Stardog's export dir ($STARDOG_HOME/.exports by default)
+	ServerSide bool `url:"server-side,omitempty"`
+
+	// Configuration file for obfuscation.
+	// See https://github.com/stardog-union/stardog-examples/blob/master/config/obfuscation.ttl for an example configuration file.
+	ObfuscationConfig *os.File
+}
+
+type createDatabaseRequest struct {
+	Name         string                      `json:"dbname"`
+	Options      map[string]interface{}      `json:"options"`
+	Files        []createDatabaseRequestFile `json:"files"`
+	CopyToServer bool                        `json:"copyToServer"`
+}
+
+type createDatabaseRequestFile struct {
+	Filename string `json:"filename"`
+	Context  string `json:"context,omitempty"`
+}
+
+type getNamespaceResponse struct {
+	Namespaces []Namespace `json:"namespaces"`
+}
+
+type getDatabasesWithOptionsResponse struct {
+	Databases []map[string]interface{} `json:"databases"`
+}
+
+type getDatabasesResponse struct {
+	Databases []string `json:"databases"`
+}
+
+// GetDatabaseOptions returns the value of specific metadata options for a database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/getDatabaseOptions
 func (s *DatabaseAdminService) GetDatabaseOptions(ctx context.Context, database string, opts []string) (map[string]interface{}, *Response, error) {
@@ -124,10 +213,10 @@ func (s *DatabaseAdminService) GetAllDatabaseOptions(ctx context.Context, databa
 	return data, resp, err
 }
 
-// GetDatabasesWithOptions returns all the database configuration options and their set values for all databases.
+// GetAllDatabasesWithOptions returns all the database configuration options and their set values for all databases.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/listDatabasesWithOptions
-func (s *DatabaseAdminService) GetDatabasesWithOptions(ctx context.Context) ([]map[string]interface{}, *Response, error) {
+func (s *DatabaseAdminService) GetAllDatabasesWithOptions(ctx context.Context) ([]map[string]interface{}, *Response, error) {
 	u := "admin/databases/options"
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -185,13 +274,6 @@ func (s *DatabaseAdminService) GetNamespaces(ctx context.Context, database strin
 		return nil, resp, err
 	}
 	return data.Namespaces, resp, err
-}
-
-// ImportNamespacesResponse contains information returned
-// after DatabaseAdminService.ImportNamespaces completed successfully.
-type ImportNamespacesResponse struct {
-	NumberImportedNamespaces int      `json:"numImportedNamespaces"`
-	UpdatedNamespaces        []string `json:"namespaces"`
 }
 
 // ImportNamespaces adds namespaces to the database that are declared in the RDF file.
@@ -269,7 +351,7 @@ func (s *DatabaseAdminService) GetDatabaseSize(ctx context.Context, database str
 	return &resultAsInt, resp, err
 }
 
-// GetAllDatabaseOptionDetails returns information on all database configuration options, including description and example values.
+// GetAllDatabaseOptionDetails returns information about all available database configuration options, including description and example values.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/getAllMetaProperties
 func (s *DatabaseAdminService) GetAllDatabaseOptionDetails(ctx context.Context) (map[string]DatabaseOptionDetails, *Response, error) {
@@ -290,28 +372,8 @@ func (s *DatabaseAdminService) GetAllDatabaseOptionDetails(ctx context.Context) 
 	return data, resp, err
 }
 
-// Dataset contains a Path and optional Context (A.K.A named graph) to add the
-// the data contained in the Path to the file into.
-type Dataset struct {
-	// Path to the file to be uploaded to the server
-	Path string
-	// The context (A.K.A named graph) for the data contained in the file to be added to.
-	Context string
-}
-
-type createDatabaseRequest struct {
-	Name         string                      `json:"dbname"`
-	Options      map[string]interface{}      `json:"options"`
-	Files        []createDatabaseRequestFile `json:"files"`
-	CopyToServer bool                        `json:"copyToServer"`
-}
-
-type createDatabaseRequestFile struct {
-	Filename string `json:"filename"`
-	Context  string `json:"context,omitempty"`
-}
-
-// CreateDatabase creates a database, optionally with RDF and database options.
+// CreateDatabase creates a database, optionally with RDF and database options. CreateDatabase assumes that the Dataset.Path(s)
+// are on the same filesystem as the Stardog server. If Dataset.Path(s) are client-side, provide a value of true for copyToServer.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/createNewDatabase
 //
@@ -344,7 +406,7 @@ func newCreateDatabaseRequestBody(name string, dbOpts map[string]interface{}, da
 	for i, dataset := range datasets {
 		files[i] = createDatabaseRequestFile{
 			Filename: filepath.Base(dataset.Path),
-			Context:  dataset.Context,
+			Context:  dataset.NamedGraph,
 		}
 	}
 
@@ -449,14 +511,6 @@ func (s *DatabaseAdminService) RepairDatabase(ctx context.Context, name string) 
 	return s.client.Do(ctx, req, nil)
 }
 
-type RestoreDatabaseOptions struct {
-	// Whether or not to overwrite an existing database with this backup
-	Force bool `url:"force,omitempty"`
-
-	// The name of the restored database, if different
-	Name string `url:"name,omitempty"`
-}
-
 // RestoreDatabase restores a database backup located at the path on the server
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/restoreDatabase
@@ -514,15 +568,6 @@ func (s *DatabaseAdminService) OfflineDatabase(ctx context.Context, name string)
 	return s.client.Do(ctx, req, nil)
 }
 
-// GenerateDataModelOptions are options for the DatatabaseAdminService.GenerateDataModel method
-type GenerateDataModelOptions struct {
-	// Enable reasoning
-	Reasoning bool `url:"reasoning,omitempty"`
-
-	// Desired output format (text, owl, shacl, sql, graphql)
-	Output string `url:"output,omitempty"`
-}
-
 // GenerateDataModel generates the reasoning model used by this database in various formats
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/generateModel
@@ -545,19 +590,23 @@ func (s *DatabaseAdminService) GenerateDataModel(ctx context.Context, database s
 	return &writer, resp, err
 }
 
-// ExportDataOptions specifies the optional parameters to the DatabaseAdmin.ExportDatabase method.
-type ExportDataOptions struct {
-	// The named graph(s) to export from the dataset
-	NamedGraph []string `url:"named-graph-uri"`
-
-	// The RDF format for the exported data
-	Format RDFFormat `url:"format,omitempty"`
-
-	// Compression format for the exported data. **Only applicable if data is exported ServerSide**
-	Compression Compression `url:"compression,omitempty"`
-
-	// Export the data to the server
-	ServerSide bool `url:"server-side,omitempty"`
+func getExportFormatFromRDFFormat(format RDFFormat) (string, error) {
+	switch format {
+	case Trig:
+		return "trig", nil
+	case Turtle:
+		return "turtle", nil
+	case JSONLD:
+		return "jsonld", nil
+	case NQuads:
+		return "nquads", nil
+	case NTriples:
+		return "ntriples", nil
+	case RDFXML:
+		return "rdfxml", nil
+	default:
+		return "", errors.New("supported RDF formats for export are Trig, Turtle, JSONLD, NQUADS, NTRIPLES, and RDFXML")
+	}
 }
 
 // ExportData exports RDF data from the database.
@@ -565,7 +614,7 @@ type ExportDataOptions struct {
 // for the server. The default server export directory is ‘.exports’ in the $STARDOG_HOME
 // but can be changed via ‘export.dir’ in the stardog.properties file.
 // In this case, some information will be returned about the export instead of the RDF such as:
-// Exported 28 statements from db1 to /stardog-home/.exports/db1-2023-01-15.trig in 2.551 ms
+// "Exported 28 statements from db1 to /stardog-home/.exports/db1-2023-01-15.trig in 2.551 ms"
 //
 // Starodg API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/exportDatabase
 func (s *DatabaseAdminService) ExportData(ctx context.Context, database string, opts *ExportDataOptions) (*bytes.Buffer, *Response, error) {
@@ -583,22 +632,11 @@ func (s *DatabaseAdminService) ExportData(ctx context.Context, database string, 
 				// if server side export, Stardog will return some details about the successful import in plain text
 				// i.e. Exported 28 statements from db1 to /stardog-home/.exports/db1-2023-01-15.trig in 2.551 ms
 				requestHeaderOptions.Accept = mediaTypePlainText
-				switch opts.Format {
-				case Trig:
-					opts.Format = "trig"
-				case Turtle:
-					opts.Format = "turtle"
-				case JSONLD:
-					opts.Format = "jsonld"
-				case NQuads:
-					opts.Format = "nquads"
-				case NTriples:
-					opts.Format = "ntriples"
-				case RDFXML:
-					opts.Format = "rdfxml"
-				default:
-					return nil, nil, errors.New("supported RDF formats for export are Trig, Turtle, JSONLD, NQUADS, NTRIPLES, and RDFXML")
+				format, err := getExportFormatFromRDFFormat(opts.Format)
+				if err != nil {
+					return nil, nil, err
 				}
+				opts.Format = RDFFormat(format)
 			}
 		}
 	}
@@ -621,33 +659,21 @@ func (s *DatabaseAdminService) ExportData(ctx context.Context, database string, 
 	return &writer, resp, err
 }
 
-// ExportObfuscatedDataOptions specifies the optional parameters to the DatabaseAdmin.ExportData method.
-type ExportObfuscatedDataOptions struct {
-	// The named graph(s) to export from the dataset
-	NamedGraph []string `url:"named-graph-uri"`
-
-	// The RDF format for the exported data
-	Format RDFFormat `url:"format,omitempty"`
-
-	// Compression format for the exported data. **Only applicable if data is exported ServerSide**
-	Compression Compression `url:"compression,omitempty"`
-
-	// Export the data to Stardog's export dir ($STARDOG_HOME/.exports by default)
-	ServerSide bool `url:"server-side,omitempty"`
-}
-
 // ExportObfuscatedData exports obfuscated RDF data from the database.
 //
-// If no obfuscationConfig is provided, Stardog will use its default obfuscation configuration.
-
+// If nil is provided for ExportObfuscatedDataOptions.ObfuscationConfig, Stardog will use its default
+// obfuscation configuration. All URIs, bnodes, and string literals in the database will be
+// obfuscated using the SHA256 message digest algorithm. Non-string typed literals (numbers, dates, etc.)
+// are left unchanged as well as URIs from built-in namespaces (e.g. RDF, RDFS, OWL, etc.)
+//
 // If ExportObfuscatedDataOptions.ServerSide=true, the RDF using the specified format will be saved in the export directory
 // for the server. The default server export directory is ‘.exports’ in the $STARDOG_HOME
 // but can be changed via ‘export.dir’ in the stardog.properties file.
 // In this case, some information will be returned about the export instead of the RDF such as:
-// Exported 28 statements from db1 to /stardog-home/.exports/db1-2023-01-15.trig in 2.551 ms
-
+// "Exported 28 statements from db1 to /stardog-home/.exports/db1-2023-01-15.trig in 2.551 ms"
+//
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/exportDatabaseObfuscated
-func (s *DatabaseAdminService) ExportObfuscatedData(ctx context.Context, database string, obfuscationConfig *os.File, opts *ExportObfuscatedDataOptions) (*bytes.Buffer, *Response, error) {
+func (s *DatabaseAdminService) ExportObfuscatedData(ctx context.Context, database string, opts *ExportObfuscatedDataOptions) (*bytes.Buffer, *Response, error) {
 	u := fmt.Sprintf("%s/export", database)
 
 	requestHeaderOptions := &requestHeaderOptions{}
@@ -656,11 +682,11 @@ func (s *DatabaseAdminService) ExportObfuscatedData(ctx context.Context, databas
 	httpMethod := http.MethodGet
 
 	var requestBody *bytes.Buffer
-	if obfuscationConfig != nil {
+	if opts != nil && opts.ObfuscationConfig != nil {
 		// if using custom obfuscation configuration, request should be a POST
 		httpMethod = http.MethodPost
 
-		stat, err := obfuscationConfig.Stat()
+		stat, err := opts.ObfuscationConfig.Stat()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -668,7 +694,7 @@ func (s *DatabaseAdminService) ExportObfuscatedData(ctx context.Context, databas
 			return nil, nil, errors.New("the obfuscation configuration file can't be a directory")
 		}
 
-		requestBytes, err := io.ReadAll(obfuscationConfig)
+		requestBytes, err := io.ReadAll(opts.ObfuscationConfig)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -687,22 +713,11 @@ func (s *DatabaseAdminService) ExportObfuscatedData(ctx context.Context, databas
 				opts.Format = ""
 			} else {
 				requestHeaderOptions.Accept = mediaTypePlainText
-				switch opts.Format {
-				case Trig:
-					opts.Format = "trig"
-				case Turtle:
-					opts.Format = "turtle"
-				case JSONLD:
-					opts.Format = "jsonld"
-				case NQuads:
-					opts.Format = "nquads"
-				case NTriples:
-					opts.Format = "ntriples"
-				case RDFXML:
-					opts.Format = "rdfxml"
-				default:
-					return nil, nil, errors.New("supported RDF formats for export are Trig, Turtle, JSONLD, NQUADS, NTRIPLES, and RDFXML")
+				format, err := getExportFormatFromRDFFormat(opts.Format)
+				if err != nil {
+					return nil, nil, err
 				}
+				opts.Format = RDFFormat(format)
 			}
 		}
 	}

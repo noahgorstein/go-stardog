@@ -129,7 +129,7 @@ func Test_ExportObfuscatedData_client_side(t *testing.T) {
 		Format:     Trig,
 	}
 
-	got, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, nil, opts)
+	got, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, opts)
 	if err != nil {
 		t.Errorf("DatabaseAdmin.ExportObfuscatedData returned error: %v", err)
 	}
@@ -140,7 +140,7 @@ func Test_ExportObfuscatedData_client_side(t *testing.T) {
 
 	const methodName = "ExportObfuscatedData"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.ExportObfuscatedData(nil, db, nil, opts)
+		got, resp, err := client.DatabaseAdmin.ExportObfuscatedData(nil, db, opts)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -178,17 +178,18 @@ func Test_ExportObfuscatedData_client_side_custom_obf_config(t *testing.T) {
 
 	ctx := context.Background()
 
-	opts := &ExportObfuscatedDataOptions{
-		NamedGraph: []string{"tag:stardog:api:context:default"},
-		Format:     Turtle,
-	}
-
 	config, err := os.Open("./test-resources/obfuscation-config.ttl")
 	if err != nil {
 		t.Errorf("error opening the obfuscation configuration file")
 	}
 
-	got, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, config, opts)
+	opts := &ExportObfuscatedDataOptions{
+		NamedGraph:        []string{"tag:stardog:api:context:default"},
+		Format:            Turtle,
+		ObfuscationConfig: config,
+	}
+
+	got, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, opts)
 	if err != nil {
 		t.Errorf("DatabaseAdmin.ExportObfuscatedData returned error: %v", err)
 	}
@@ -199,7 +200,7 @@ func Test_ExportObfuscatedData_client_side_custom_obf_config(t *testing.T) {
 
 	const methodName = "ExportObfuscatedData"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.ExportObfuscatedData(nil, db, config, opts)
+		got, resp, err := client.DatabaseAdmin.ExportObfuscatedData(nil, db, opts)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -228,14 +229,14 @@ func Test_ExportObfuscatedData_server_side(t *testing.T) {
 		Compression: BZ2,
 	}
 
-	_, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, nil, opts)
+	_, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, opts)
 	if err != nil {
 		t.Errorf("DatabaseAdmin.ExportObfuscatedData returned error: %v", err)
 	}
 
 	const methodName = "ExportObfuscatedData"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.ExportObfuscatedData(nil, db, nil, opts)
+		got, resp, err := client.DatabaseAdmin.ExportObfuscatedData(nil, db, opts)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -355,22 +356,22 @@ func Test_CreateDatabase(t *testing.T) {
 	}
 	datasetsWithRealFilePaths := []Dataset{
 		{
-			Path:    "./test-resources/beatles.ttl",
-			Context: "http://beatles",
+			Path:       "./test-resources/beatles.ttl",
+			NamedGraph: "http://beatles",
 		},
 		{
-			Path:    "./test-resources/music_schema.ttl",
-			Context: "http://schema",
+			Path:       "./test-resources/music_schema.ttl",
+			NamedGraph: "http://schema",
 		},
 	}
 	datasetsWithFakeFilePaths := []Dataset{
 		{
-			Path:    "./fake-directory/beatles.ttl",
-			Context: "http://beatles",
+			Path:       "./fake-directory/beatles.ttl",
+			NamedGraph: "http://beatles",
 		},
 		{
-			Path:    "./fake-directory/music_schema.ttl",
-			Context: "http://schema",
+			Path:       "./fake-directory/music_schema.ttl",
+			NamedGraph: "http://schema",
 		},
 	}
 
@@ -383,6 +384,11 @@ func Test_CreateDatabase(t *testing.T) {
 	_, err = client.DatabaseAdmin.CreateDatabase(ctx, dbName, datasetsWithFakeFilePaths, dbOpts, true)
 	if err == nil {
 		t.Error("DatabaseAdmin.CreateDatabase should return an error due to not being able to find the files.")
+	}
+
+	_, err = client.DatabaseAdmin.CreateDatabase(ctx, dbName, nil, nil, false)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.CreateDatabase returned error: %v", err)
 	}
 
 	const methodName = "CreateDatabase"
@@ -982,18 +988,18 @@ func Test_GetDatabasesWithOptions(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	got, _, err := client.DatabaseAdmin.GetDatabasesWithOptions(ctx)
+	got, _, err := client.DatabaseAdmin.GetAllDatabasesWithOptions(ctx)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.GetDatabasesWithOptions returned error: %v", err)
+		t.Errorf("DatabaseAdmin.GetAllDatabasesWithOptions returned error: %v", err)
 	}
 	t.Log(len(got))
 	if want := wantDatabasesWithOptions; !cmp.Equal(len(got), len(want)) {
-		t.Errorf("DatabaseAdmin.GetDatabasesWithOptions returned slice has length %+v, want %+v", got, want)
+		t.Errorf("DatabaseAdmin.GetAllDatabasesWithOptions returned slice has length %+v, want %+v", got, want)
 	}
 
-	const methodName = "GetDatabasesWithOptions"
+	const methodName = "GetAllDatabasesWithOptions"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.GetDatabasesWithOptions(nil)
+		got, resp, err := client.DatabaseAdmin.GetAllDatabasesWithOptions(nil)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}

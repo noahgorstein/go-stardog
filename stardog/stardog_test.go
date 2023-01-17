@@ -50,7 +50,7 @@ func setup() (client *Client, mux *http.ServeMux, serverURL string, teardown fun
 	// configured to use test server.
 	client, _ = NewClient(DefaultServerURL, nil)
 	url, _ := url.Parse(server.URL + baseURLPath + "/")
-	client.BaseURL = url
+	client.baseURL = url
 
 	return client, mux, server.URL, server.Close
 }
@@ -76,7 +76,7 @@ func newInt(i int) *int {
 func TestNewClient(t *testing.T) {
 	c, _ := NewClient(DefaultServerURL, nil)
 
-	if got, want := c.BaseURL.String(), DefaultServerURL; got != want {
+	if got, want := c.baseURL.String(), DefaultServerURL; got != want {
 		t.Errorf("NewClient BaseURL is %v, want %v", got, want)
 	}
 	if got, want := c.UserAgent, defaultUserAgent; got != want {
@@ -93,7 +93,7 @@ func TestNewClient_trailingSlashServerURL(t *testing.T) {
 	serverURL := "http://localhost:5821"
 	c, _ := NewClient(serverURL, nil)
 
-	if got, want := c.BaseURL.String(), fmt.Sprintf("%v/", serverURL); got != want {
+	if got, want := c.baseURL.String(), fmt.Sprintf("%v/", serverURL); got != want {
 		t.Errorf("NewClient BaseURL is %v, want %v", got, want)
 	}
 }
@@ -151,7 +151,7 @@ func testNewRequestAndDoFailure(t *testing.T, methodName string, client *Client,
 
 	// invalid BaseURL (i.e. one without a trailing slash)
 	// this will make NewRequest fail
-	client.BaseURL.Path = ""
+	client.baseURL.Path = ""
 	resp, err := f()
 	if resp != nil {
 		t.Errorf("client.BaseURL.Path='' %v resp = %#v, want nil", methodName, resp)
@@ -160,7 +160,7 @@ func testNewRequestAndDoFailure(t *testing.T, methodName string, client *Client,
 		t.Errorf("client.BaseURL.Path='' %v err = nil, want error", methodName)
 	}
 
-	client.BaseURL.Path = baseURLPath + "/"
+	client.baseURL.Path = baseURLPath + "/"
 	resp, err = f()
 	if err == nil {
 		t.Errorf("%v err = nil, want error", methodName)
@@ -448,7 +448,7 @@ func TestBasicAuthTransport(t *testing.T) {
 		Password: password,
 	}
 	basicAuthClient, _ := NewClient(DefaultServerURL, tp.Client())
-	basicAuthClient.BaseURL = client.BaseURL
+	basicAuthClient.baseURL = client.baseURL
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
@@ -503,7 +503,7 @@ func TestBearerAuthTransport(t *testing.T) {
 		BearerToken: "12345",
 	}
 	bearerAuthClient, _ := NewClient(DefaultServerURL, tp.Client())
-	bearerAuthClient.BaseURL = client.BaseURL
+	bearerAuthClient.baseURL = client.baseURL
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}

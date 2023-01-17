@@ -65,7 +65,7 @@ func main() {
 
 	opts := &stardog.GenerateDataModelOptions{
 		Reasoning: false,
-		Output:    "text",
+		Output:    stardog.SHACL,
 	}
 
 	buf, _, err := client.DatabaseAdmin.GenerateDataModel(context.Background(), database, opts)
@@ -79,7 +79,7 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("Successfully generated data model for: \"%s\"\n", database)
-	fmt.Println("-------DATA MODEL-------")
+	fmt.Println("-------DATA MODEL (SHACL)-------")
 	if buf != nil {
 		fmt.Println(buf.String())
 	}

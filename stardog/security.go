@@ -99,7 +99,7 @@ const (
 	Grant      Action = "grant"
 	Revoke     Action = "revoke"
 	Execute    Action = "execute"
-	AllActions Action = "*"
+	AllActions Action = "all"
 )
 
 // ResourceType represents the resource type in a permission definition.
@@ -120,7 +120,7 @@ const (
 	AllResourceTypes  ResourceType = "*"
 )
 
-// NewPermission represents a new permission to be granted/revoked
+// NewPermission is a helper function to create a Permission to be granted/revoked
 func NewPermission(action Action, resourceType ResourceType, resource []string) *Permission {
 	permission := Permission{
 		Action:       string(action),

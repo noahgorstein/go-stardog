@@ -2,20 +2,47 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"golang.org/x/crypto/ssh/terminal"
 	"os"
+	"strings"
+	"syscall"
 
 	"github.com/noahgorstein/go-stardog/stardog"
 )
 
 func main() {
 
-	basicAuth := stardog.BasicAuthTransport{
-		Username: "admin",
-		Password: "admin",
+	r := bufio.NewReader(os.Stdin)
+	fmt.Print("Endpoint (leave empty for http://localhost:5820): ")
+	endpoint, _ := r.ReadString('\n')
+	endpoint = strings.TrimSpace(endpoint)
+	if endpoint == "" {
+		endpoint = "http://localhost:5820"
 	}
-	client, _ := stardog.NewClient("http://localhost:5820", basicAuth.Client())
+
+	fmt.Print("Username (leave empty for admin): ")
+	username, _ := r.ReadString('\n')
+	username = strings.TrimSpace(username)
+	if username == "" {
+		username = "admin"
+	}
+
+	fmt.Print("Password (leave empty for admin): ")
+	bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+	password := string(bytePassword)
+	if password == "" {
+		password = "admin"
+	}
+	fmt.Println()
+
+	basicAuthTransport := stardog.BasicAuthTransport{
+		Username: strings.TrimSpace(username),
+		Password: strings.TrimSpace(password),
+	}
+	client, _ := stardog.NewClient("http://localhost:5820", basicAuthTransport.Client())
 
 	dbs, _, err := client.DatabaseAdmin.GetDatabases(context.Background())
 	if err != nil {
