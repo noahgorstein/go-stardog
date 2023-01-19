@@ -81,7 +81,7 @@ type createDatabaseResponse struct {
 	Message *string `json:"message"`
 }
 
-// CreateDatabaseOptions specifies the optional parameters to the DatabaseAdmin.CreateDatabase method.
+// CreateDatabaseOptions specifies the optional parameters to the DatabaseAdminService.CreateDatabase method.
 type CreateDatabaseOptions struct {
 	// The data to be bulk-loaded to the database at creation time
 	Datasets []Dataset
