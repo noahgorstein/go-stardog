@@ -77,6 +77,20 @@ type DatabaseOptionDetails struct {
 	DefaultValue      interface{} `json:"defaultValue"`
 }
 
+type createDatabaseResponse struct {
+	Message *string `json:"message"`
+}
+
+// CreateDatabaseOptions specifies the optional parameters to the DatabaseAdmin.CreateDatabase method.
+type CreateDatabaseOptions struct {
+	// The data to be bulk-loaded to the database at creation time
+	Datasets []Dataset
+	// Database configuration options
+	DatabaseOptions map[string]interface{}
+	// Whether to send the file contents to the server. Use if data exists client-side.
+	CopyToServer bool
+}
+
 type Dataset struct {
 	// Path to the file to be uploaded to the server
 	Path string
@@ -372,50 +386,71 @@ func (s *DatabaseAdminService) GetAllDatabaseOptionDetails(ctx context.Context) 
 	return data, resp, err
 }
 
-// CreateDatabase creates a database, optionally with RDF and database options. CreateDatabase assumes that the Dataset.Path(s)
-// are on the same filesystem as the Stardog server. If Dataset.Path(s) are client-side, provide a value of true for copyToServer.
+// CreateDatabase creates a database, optionally with RDF and database options. CreateDatabase assumes that the
+// Paths in the Dataset(s) provided for CreateDatabaseOptions.Datasets exist on the server. If they are client side,
+// provide a value of true for CreateDatabaseOptions.CopyToServer
+//
+// If the database creation is successful a *string containing details about the database creation will be returned
+// such as:
+// Bulk loading data to new database db1.
+// Loaded 41,099 triples to db1 from 1 file(s) in 00:00:00.487 @ 84.4K triples/sec.
+// Successfully created database 'db1'.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/createNewDatabase
-//
-//revive:disable-next-line:argument-limit
-func (s *DatabaseAdminService) CreateDatabase(ctx context.Context, name string, ds []Dataset, dbOpts map[string]interface{}, copyToServer bool) (*Response, error) {
-	body, writer, err := newCreateDatabaseRequestBody(name, dbOpts, ds, copyToServer)
+func (s *DatabaseAdminService) CreateDatabase(ctx context.Context, name string, opts *CreateDatabaseOptions) (*string, *Response, error) {
+	body, writer, err := newCreateDatabaseRequestBody(name, opts)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	headerOpts := &requestHeaderOptions{ContentType: writer.FormDataContentType()}
+	headerOpts := &requestHeaderOptions{
+		ContentType: writer.FormDataContentType(),
+		Accept:      mediaTypeApplicationJSON,
+	}
 	req, err := s.client.NewMultipartFormDataRequest(
 		http.MethodPost,
 		"admin/databases",
 		headerOpts,
 		body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return s.client.Do(ctx, req, nil)
+
+	var createDatabaseResponse createDatabaseResponse
+	resp, err := s.client.Do(ctx, req, &createDatabaseResponse)
+	if err != nil {
+		return nil, resp, err
+	}
+	return createDatabaseResponse.Message, resp, nil
 }
 
 // newCreateDatabaseRequestBody creates the request body needed for DatabaseAdminService.CreateDatabase
-//
-//revive:disable-next-line:flag-parameter
-func newCreateDatabaseRequestBody(name string, dbOpts map[string]interface{}, datasets []Dataset, copyToServer bool) (*bytes.Buffer, *multipart.Writer, error) {
+func newCreateDatabaseRequestBody(name string, opts *CreateDatabaseOptions) (*bytes.Buffer, *multipart.Writer, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	var files = make([]createDatabaseRequestFile, len(datasets))
-	for i, dataset := range datasets {
-		files[i] = createDatabaseRequestFile{
-			Filename: filepath.Base(dataset.Path),
-			Context:  dataset.NamedGraph,
-		}
+	req := createDatabaseRequest{
+		Name: name,
 	}
 
-	req := createDatabaseRequest{
-		Name:         name,
-		Options:      dbOpts,
-		Files:        files,
-		CopyToServer: copyToServer,
+	if opts != nil {
+		if opts.Datasets != nil {
+			var files = make([]createDatabaseRequestFile, len(opts.Datasets))
+			for i, dataset := range opts.Datasets {
+				files[i] = createDatabaseRequestFile{
+					Filename: dataset.Path,
+					Context:  dataset.NamedGraph,
+				}
+			}
+			req.Files = files
+		}
+		if opts.DatabaseOptions == nil {
+			req.Options = make(map[string]interface{})
+		} else {
+			req.Options = opts.DatabaseOptions
+		}
+		req.CopyToServer = opts.CopyToServer
 	}
+
 	jsonReq, err := json.Marshal(req)
 	if err != nil {
 		return nil, nil, err
@@ -426,8 +461,8 @@ func newCreateDatabaseRequestBody(name string, dbOpts map[string]interface{}, da
 	}
 
 	// if files are to be sent to server, check that they exist on host
-	if copyToServer {
-		for _, dataset := range datasets {
+	if opts != nil && opts.CopyToServer && opts.Datasets != nil {
+		for _, dataset := range opts.Datasets {
 			file, err := os.Open(dataset.Path)
 			if err != nil {
 				return nil, nil, err

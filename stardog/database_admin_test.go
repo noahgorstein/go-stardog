@@ -341,9 +341,13 @@ func Test_CreateDatabase(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
+	respInfoJSON := `{"message":"Bulk loading data to new database movies.\nLoaded 41,099 triples to movies from 1 file(s) in 00:00:00.351 @ 117.1K triples/sec.\nSuccessfully created database 'movies'.\n"}`
+
 	mux.HandleFunc(fmt.Sprintf("/admin/databases"), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "POST")
+		testHeader(t, r, "Accept", mediaTypeApplicationJSON)
 		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(respInfoJSON))
 
 		if r.PostFormValue("root") == "" {
 			t.Errorf("DatabaseAdmin.CreateDatabase should have a key with the name 'root' in the POST'd form")
@@ -375,25 +379,50 @@ func Test_CreateDatabase(t *testing.T) {
 		},
 	}
 
+	optsWithRealDatasets := &CreateDatabaseOptions{
+		Datasets:        datasetsWithRealFilePaths,
+		DatabaseOptions: dbOpts,
+		CopyToServer:    true,
+	}
+
+	optsWithFakeDatasets := &CreateDatabaseOptions{
+		Datasets:        datasetsWithFakeFilePaths,
+		DatabaseOptions: dbOpts,
+		CopyToServer:    true,
+	}
+
 	ctx := context.Background()
-	_, err := client.DatabaseAdmin.CreateDatabase(ctx, dbName, datasetsWithRealFilePaths, dbOpts, true)
+	info, _, err := client.DatabaseAdmin.CreateDatabase(ctx, dbName, optsWithRealDatasets)
 	if err != nil {
 		t.Errorf("DatabaseAdmin.CreateDatabase returned error: %v", err)
 	}
+	if info == nil {
+		t.Errorf("DatabaseAdmin.CreateDatabase should return information string for succesful db creation.")
+	}
 
-	_, err = client.DatabaseAdmin.CreateDatabase(ctx, dbName, datasetsWithFakeFilePaths, dbOpts, true)
+	info, _, err = client.DatabaseAdmin.CreateDatabase(ctx, dbName, optsWithFakeDatasets)
 	if err == nil {
 		t.Error("DatabaseAdmin.CreateDatabase should return an error due to not being able to find the files.")
 	}
+	if info != nil {
+		t.Errorf("DatabaseAdmin.CreateDatabase should not return information string for succesful db creation.")
+	}
 
-	_, err = client.DatabaseAdmin.CreateDatabase(ctx, dbName, nil, nil, false)
+	info, _, err = client.DatabaseAdmin.CreateDatabase(ctx, dbName, nil)
 	if err != nil {
 		t.Errorf("DatabaseAdmin.CreateDatabase returned error: %v", err)
+	}
+	if info == nil {
+		t.Errorf("DatabaseAdmin.CreateDatabase should return information string for succesful db creation.")
 	}
 
 	const methodName = "CreateDatabase"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.DatabaseAdmin.CreateDatabase(nil, dbName, datasetsWithRealFilePaths, dbOpts, true)
+		got, resp, err := client.DatabaseAdmin.CreateDatabase(nil, dbName, nil)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
 	})
 
 }
