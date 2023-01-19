@@ -116,7 +116,11 @@ func (c *Client) NewMultipartFormDataRequest(method string, urlStr string, heade
 			if ok {
 				reader := strings.NewReader(buf.String())
 				req, err := http.NewRequest(method, u.String(), reader)
+
 				req.Header.Set("Content-Type", headerOpts.ContentType)
+				if headerOpts.Accept != "" {
+					req.Header.Set("Accept", headerOpts.Accept)
+				}
 				return req, err
 			}
 		}
