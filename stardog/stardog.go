@@ -35,6 +35,7 @@ type Client struct {
 
 	//Services for talking to different parts of the Stardog API
 	DatabaseAdmin *DatabaseAdminService
+	Sparql        *SPARQLService
 	Security      *SecurityService
 	ServerAdmin   *ServerAdminService
 	Transaction   *TransactionService
@@ -94,6 +95,7 @@ func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
 	c := &Client{client: httpClient, baseURL: serverEndpoint, UserAgent: defaultUserAgent}
 	c.common.client = c
 	c.DatabaseAdmin = (*DatabaseAdminService)(&c.common)
+	c.Sparql = (*SPARQLService)(&c.common)
 	c.Security = (*SecurityService)(&c.common)
 	c.ServerAdmin = (*ServerAdminService)(&c.common)
 	c.Transaction = (*TransactionService)(&c.common)
