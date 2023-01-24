@@ -17,11 +17,11 @@ import (
 
 const (
 	// Version of go-stardog
-	Version          = "v0.4.0"
+	Version = "v0.4.0"
 
 	defaultServerURL = "http://localhost:5820/"
 	defaultUserAgent = "stardog-go" + forwardSlash + Version
-	forwardSlash = "/"
+	forwardSlash     = "/"
 )
 
 var errNonNilContext = errors.New("context must be non-nil")

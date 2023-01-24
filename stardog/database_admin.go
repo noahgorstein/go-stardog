@@ -105,7 +105,7 @@ type ExportDataOptions struct {
 	NamedGraph []string `url:"named-graph-uri"`
 
 	// The RDF format for the exported data
-  Format RDFFormat `url:"-"`
+	Format RDFFormat `url:"-"`
 
 	// Compression format for the exported data. **Only applicable if data is exported ServerSide**
 	Compression Compression `url:"compression,omitempty"`
@@ -120,7 +120,7 @@ type ExportObfuscatedDataOptions struct {
 	NamedGraph []string `url:"named-graph-uri"`
 
 	// The RDF format for the exported data
-  Format RDFFormat `url:"-"`
+	Format RDFFormat `url:"-"`
 
 	// Compression format for the exported data. **Only applicable if data is exported ServerSide**
 	Compression Compression `url:"compression,omitempty"`
@@ -670,7 +670,7 @@ func (s *DatabaseAdminService) ExportData(ctx context.Context, database string, 
 				if err != nil {
 					return nil, nil, err
 				}
-        u += fmt.Sprintf("?format=%s", format)
+				u += fmt.Sprintf("?format=%s", format)
 			}
 		}
 	}
@@ -733,14 +733,14 @@ func (s *DatabaseAdminService) ExportObfuscatedData(ctx context.Context, databas
 			return nil, nil, err
 		}
 		requestBody = bytes.NewBuffer(requestBytes)
-		requestHeaderOptions.ContentType =  RDFFormatTurtle.String()
+		requestHeaderOptions.ContentType = RDFFormatTurtle.String()
 	} else {
 		// if no obfuscation configuration is provided use Stardog's default one
 		u = u + "?obf=DEFAULT"
 	}
 
 	if opts != nil {
-		if opts.Format.Valid()  {
+		if opts.Format.Valid() {
 			if !opts.ServerSide {
 				requestHeaderOptions.Accept = opts.Format.String()
 			} else {
@@ -749,12 +749,12 @@ func (s *DatabaseAdminService) ExportObfuscatedData(ctx context.Context, databas
 				if err != nil {
 					return nil, nil, err
 				}
-        if strings.Contains(u, "?obf=DEFAULT") {
-          u +="&"
-        } else {
-          u +="?"
-        }
-        u += fmt.Sprintf("format=%s", format)
+				if strings.Contains(u, "?obf=DEFAULT") {
+					u += "&"
+				} else {
+					u += "?"
+				}
+				u += fmt.Sprintf("format=%s", format)
 			}
 		}
 	}
