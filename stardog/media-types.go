@@ -13,4 +13,5 @@ const (
 	mediaTypeApplicationSparqlResultsXML  = "application/sparql-results+xml"
 	mediaTypeTextCSV                      = "text/csv"
 	mediaTypeTextTSV                      = "text/tsv"
+	mediaTypeBoolean                      = "text/boolean"
 )

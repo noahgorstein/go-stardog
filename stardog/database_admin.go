@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 // DatabaseAdminService handles communication with the database admin related methods of the Stardog API.
@@ -104,7 +105,7 @@ type ExportDataOptions struct {
 	NamedGraph []string `url:"named-graph-uri"`
 
 	// The RDF format for the exported data
-	Format RDFFormat `url:"format,omitempty"`
+  Format RDFFormat `url:"-"`
 
 	// Compression format for the exported data. **Only applicable if data is exported ServerSide**
 	Compression Compression `url:"compression,omitempty"`
@@ -119,7 +120,7 @@ type ExportObfuscatedDataOptions struct {
 	NamedGraph []string `url:"named-graph-uri"`
 
 	// The RDF format for the exported data
-	Format RDFFormat `url:"format,omitempty"`
+  Format RDFFormat `url:"-"`
 
 	// Compression format for the exported data. **Only applicable if data is exported ServerSide**
 	Compression Compression `url:"compression,omitempty"`
@@ -320,7 +321,7 @@ func (s *DatabaseAdminService) ImportNamespaces(ctx context.Context, database st
 			return nil, nil, err
 		}
 
-		headerOpts.ContentType = string(rdfFormat)
+		headerOpts.ContentType = rdfFormat.String()
 	}
 
 	req, err := s.client.NewRequest(http.MethodPost, u, &headerOpts, requestBody)
@@ -627,17 +628,17 @@ func (s *DatabaseAdminService) GenerateDataModel(ctx context.Context, database s
 
 func getExportFormatFromRDFFormat(format RDFFormat) (string, error) {
 	switch format {
-	case Trig:
+	case RDFFormatTrig:
 		return "trig", nil
-	case Turtle:
+	case RDFFormatTurtle:
 		return "turtle", nil
-	case JSONLD:
+	case RDFFormatJSONLD:
 		return "jsonld", nil
-	case NQuads:
+	case RDFFormatNQuads:
 		return "nquads", nil
-	case NTriples:
+	case RDFFormatNTriples:
 		return "ntriples", nil
-	case RDFXML:
+	case RDFFormatRDFXML:
 		return "rdfxml", nil
 	default:
 		return "", errors.New("supported RDF formats for export are Trig, Turtle, JSONLD, NQUADS, NTRIPLES, and RDFXML")
@@ -658,11 +659,9 @@ func (s *DatabaseAdminService) ExportData(ctx context.Context, database string, 
 	requestHeaderOptions := &requestHeaderOptions{}
 
 	if opts != nil {
-		if opts.Format != "" {
+		if opts.Format.Valid() {
 			if !opts.ServerSide {
-				requestHeaderOptions.Accept = string(opts.Format)
-				// force format to be omitted from the query params
-				opts.Format = ""
+				requestHeaderOptions.Accept = opts.Format.String()
 			} else {
 				// if server side export, Stardog will return some details about the successful import in plain text
 				// i.e. Exported 28 statements from db1 to /stardog-home/.exports/db1-2023-01-15.trig in 2.551 ms
@@ -671,7 +670,7 @@ func (s *DatabaseAdminService) ExportData(ctx context.Context, database string, 
 				if err != nil {
 					return nil, nil, err
 				}
-				opts.Format = RDFFormat(format)
+        u += fmt.Sprintf("?format=%s", format)
 			}
 		}
 	}
@@ -734,25 +733,28 @@ func (s *DatabaseAdminService) ExportObfuscatedData(ctx context.Context, databas
 			return nil, nil, err
 		}
 		requestBody = bytes.NewBuffer(requestBytes)
-		requestHeaderOptions.ContentType = string(Turtle)
+		requestHeaderOptions.ContentType =  RDFFormatTurtle.String()
 	} else {
 		// if no obfuscation configuration is provided use Stardog's default one
 		u = u + "?obf=DEFAULT"
 	}
 
 	if opts != nil {
-		if opts.Format != "" {
+		if opts.Format.Valid()  {
 			if !opts.ServerSide {
-				requestHeaderOptions.Accept = string(opts.Format)
-				// force format to be omitted from the query params
-				opts.Format = ""
+				requestHeaderOptions.Accept = opts.Format.String()
 			} else {
 				requestHeaderOptions.Accept = mediaTypePlainText
 				format, err := getExportFormatFromRDFFormat(opts.Format)
 				if err != nil {
 					return nil, nil, err
 				}
-				opts.Format = RDFFormat(format)
+        if strings.Contains(u, "?obf=DEFAULT") {
+          u +="&"
+        } else {
+          u +="?"
+        }
+        u += fmt.Sprintf("format=%s", format)
 			}
 		}
 	}

@@ -26,7 +26,7 @@ func Test_ExportData_server_side(t *testing.T) {
 
 	opts := &ExportDataOptions{
 		NamedGraph:  []string{"tag:stardog:api:context:default"},
-		Format:      Turtle,
+		Format:      RDFFormatTurtle,
 		ServerSide:  true,
 		Compression: BZ2,
 	}
@@ -63,7 +63,7 @@ func Test_ExportData_client_side(t *testing.T) {
 
 	mux.HandleFunc(fmt.Sprintf("/%s/export", db), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		testHeader(t, r, "Accept", string(Turtle))
+		testHeader(t, r, "Accept", RDFFormatTurtle.String())
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(returnedRDF))
 	})
@@ -72,7 +72,7 @@ func Test_ExportData_client_side(t *testing.T) {
 
 	opts := &ExportDataOptions{
 		NamedGraph: []string{"tag:stardog:api:context:default"},
-		Format:     Turtle,
+		Format:     RDFFormatTurtle,
 	}
 
 	got, _, err := client.DatabaseAdmin.ExportData(ctx, db, opts)
@@ -117,7 +117,7 @@ func Test_ExportObfuscatedData_client_side(t *testing.T) {
 
 	mux.HandleFunc(fmt.Sprintf("/%s/export", db), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		testHeader(t, r, "Accept", string(Trig))
+		testHeader(t, r, "Accept", RDFFormatTrig.String())
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(returnedRDF))
 	})
@@ -126,7 +126,7 @@ func Test_ExportObfuscatedData_client_side(t *testing.T) {
 
 	opts := &ExportObfuscatedDataOptions{
 		NamedGraph: []string{"tag:stardog:api:context:default"},
-		Format:     Trig,
+		Format:     RDFFormatTrig,
 	}
 
 	got, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, opts)
@@ -171,7 +171,7 @@ func Test_ExportObfuscatedData_client_side_custom_obf_config(t *testing.T) {
 
 	mux.HandleFunc(fmt.Sprintf("/%s/export", db), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "POST")
-		testHeader(t, r, "Accept", string(Turtle))
+		testHeader(t, r, "Accept", RDFFormatTurtle.String())
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(returnedRDF))
 	})
@@ -185,7 +185,7 @@ func Test_ExportObfuscatedData_client_side_custom_obf_config(t *testing.T) {
 
 	opts := &ExportObfuscatedDataOptions{
 		NamedGraph:        []string{"tag:stardog:api:context:default"},
-		Format:            Turtle,
+		Format:            RDFFormatTurtle,
 		ObfuscationConfig: config,
 	}
 
@@ -224,7 +224,7 @@ func Test_ExportObfuscatedData_server_side(t *testing.T) {
 
 	opts := &ExportObfuscatedDataOptions{
 		NamedGraph:  []string{"tag:stardog:api:context:default"},
-		Format:      Turtle,
+		Format:      RDFFormatTurtle,
 		ServerSide:  true,
 		Compression: BZ2,
 	}
