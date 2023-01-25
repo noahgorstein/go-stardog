@@ -97,8 +97,8 @@ func Test_GetUsersWithDetails(t *testing.T) {
 				Permissions: []Permission{
 					{
 						Explicit:     newTrue(),
-						Action:       string("READ"),
-						ResourceType: string(Database),
+						Action:       PermissionActionRead,
+						ResourceType: PermissionResourceTypeDatabase,
 						Resource:     []string{"myDatabase"},
 					},
 				},
@@ -142,7 +142,11 @@ func Test_GetUserPermissions(t *testing.T) {
       ]
     }`
 	var wantUserPermissions = []Permission{
-		{Action: "READ", ResourceType: "named-graph", Resource: []string{"db1"}}}
+		{
+			Action:       PermissionActionRead,
+			ResourceType: PermissionResourceTypeNamedGraph,
+			Resource:     []string{"db1"}},
+	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/user/%s", "bob"), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
@@ -180,7 +184,12 @@ func Test_GetUserEffectivePermissions(t *testing.T) {
       ]
     }`
 	var wantUserEffectivePermissions = []Permission{
-		{Action: "DELETE", ResourceType: "named-graph", Resource: []string{"db1"}, Explicit: newFalse()}}
+		{
+			Action:       PermissionActionDelete,
+			ResourceType: PermissionResourceTypeNamedGraph,
+			Resource:     []string{"db1"},
+			Explicit:     newFalse()},
+	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/effective/user/%s", "bob"), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
@@ -249,9 +258,21 @@ func Test_GetUserDetails(t *testing.T) {
 		Superuser: false,
 		Roles:     []string{},
 		Permissions: []Permission{
-			{Action: "READ", ResourceType: "db", Resource: []string{"myDatabase"}, Explicit: newTrue()},
-			{Action: "READ", ResourceType: "user", Resource: []string{"frodo"}, Explicit: newTrue()},
-			{Action: "WRITE", ResourceType: "user", Resource: []string{"frodo"}, Explicit: newTrue()},
+			{
+				Action:       PermissionActionRead,
+				ResourceType: PermissionResourceTypeDatabase,
+				Resource:     []string{"myDatabase"},
+				Explicit:     newTrue()},
+			{
+				Action:       PermissionActionRead,
+				ResourceType: PermissionResourceTypeUser,
+				Resource:     []string{"frodo"},
+				Explicit:     newTrue()},
+			{
+				Action:       PermissionActionWrite,
+				ResourceType: PermissionResourceTypeUser,
+				Resource:     []string{"frodo"},
+				Explicit:     newTrue()},
 		},
 	}
 	mux.HandleFunc(fmt.Sprintf("/admin/users/%s", "bob"), func(w http.ResponseWriter, r *http.Request) {
@@ -540,8 +561,8 @@ func Test_GetRolesWithDetails(t *testing.T) {
 				Rolename: "reader",
 				Permissions: []Permission{
 					{
-						Action:       "READ",
-						ResourceType: "*",
+						Action:       PermissionActionRead,
+						ResourceType: PermissionResourceTypeAll,
 						Resource:     []string{"*"},
 					},
 				},
@@ -550,8 +571,8 @@ func Test_GetRolesWithDetails(t *testing.T) {
 				Rolename: "writer",
 				Permissions: []Permission{
 					{
-						Action:       "WRITE",
-						ResourceType: "*",
+						Action:       PermissionActionWrite,
+						ResourceType: PermissionResourceTypeAll,
 						Resource:     []string{"*"},
 					},
 				},
@@ -664,7 +685,11 @@ func Test_GetRolePermissions(t *testing.T) {
       ]
     }`
 	var wantRolePermissions = []Permission{
-		{Action: "READ", ResourceType: "named-graph", Resource: []string{"db1"}}}
+		{
+			Action:       PermissionActionRead,
+			ResourceType: PermissionResourceTypeNamedGraph,
+			Resource:     []string{"db1"},
+		}}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/role/%s", rolename), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
@@ -697,7 +722,11 @@ func Test_GrantRolePermission(t *testing.T) {
 	defer teardown()
 
 	var rolename = "reader"
-	var permission = &Permission{Action: "read", ResourceType: "db", Resource: []string{"*"}}
+	var permission = &Permission{
+		Action:       PermissionActionRead,
+		ResourceType: PermissionResourceTypeDatabase,
+		Resource:     []string{"*"},
+	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/role/%s", rolename), func(w http.ResponseWriter, r *http.Request) {
 		v := new(Permission)
@@ -730,7 +759,10 @@ func Test_RevokeRolePermission(t *testing.T) {
 	defer teardown()
 
 	var rolename = "reader"
-	var permission = &Permission{Action: "read", ResourceType: "db", Resource: []string{"*"}}
+	var permission = &Permission{
+		Action:       PermissionActionRead,
+		ResourceType: PermissionResourceTypeDatabase,
+		Resource:     []string{"*"}}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/role/%s/delete", rolename), func(w http.ResponseWriter, r *http.Request) {
 		v := new(Permission)
@@ -828,7 +860,11 @@ func Test_GrantUserPermission(t *testing.T) {
 	defer teardown()
 
 	var username = "frodo"
-	var permission = &Permission{Action: "read", ResourceType: "db", Resource: []string{"*"}}
+	var permission = &Permission{
+		Action:       PermissionActionRead,
+		ResourceType: PermissionResourceTypeDatabase,
+		Resource:     []string{"*"},
+	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/user/%s", username), func(w http.ResponseWriter, r *http.Request) {
 		v := new(Permission)
@@ -861,7 +897,11 @@ func Test_RevokeUserPermission(t *testing.T) {
 	defer teardown()
 
 	var username = "frodo"
-	var permission = &Permission{Action: "read", ResourceType: "db", Resource: []string{"*"}}
+	var permission = &Permission{
+		Action:       PermissionActionRead,
+		ResourceType: PermissionResourceTypeDatabase,
+		Resource:     []string{"*"},
+	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/user/%s/delete", username), func(w http.ResponseWriter, r *http.Request) {
 		v := new(Permission)
@@ -976,18 +1016,4 @@ func Test_UnassignRole(t *testing.T) {
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		return client.Security.UnassignRole(nil, username, rolename)
 	})
-}
-
-func Test_NewPermission(t *testing.T) {
-	newPermission := NewPermission(Read, Database, []string{"*"})
-
-	want := &Permission{
-		Action:       string(Read),
-		ResourceType: string(Database),
-		Resource:     []string{"*"},
-	}
-
-	if !cmp.Equal(newPermission, want) {
-		t.Errorf("NewPermission returned %+v, want %+v", newPermission, want)
-	}
 }

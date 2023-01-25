@@ -88,46 +88,139 @@ type getUsersWithDetailsResponse struct {
 	Users []UserDetails `json:"users"`
 }
 
-// Action represents the action in a permission definition.
-type Action string
+// PermissionAction represents the [action] in a Stardog permission.
+// The zero value for a PermissionAction is [PermissionActionUnknown]
+//
+// [action]: https://docs.stardog.com/operating-stardog/security/security-model#actions
+type PermissionAction int
 
+// All available actions for a permission
 const (
-	Read       Action = "read"
-	Write      Action = "write"
-	Create     Action = "create"
-	Delete     Action = "delete"
-	Grant      Action = "grant"
-	Revoke     Action = "revoke"
-	Execute    Action = "execute"
-	AllActions Action = "all"
+	PermissionActionUnknown PermissionAction = iota
+	PermissionActionRead
+	PermissionActionWrite
+	PermissionActionCreate
+	PermissionActionDelete
+	PermissionActionGrant
+	PermissionActionRevoke
+	PermissionActionExecute
+	PermissionActionAll
 )
 
-// ResourceType represents the resource type in a permission definition.
-type ResourceType string
-
-const (
-	Database          ResourceType = "db"
-	Metadata          ResourceType = "metadata"
-	User              ResourceType = "user"
-	Role              ResourceType = "role"
-	NamedGraph        ResourceType = "named-graph"
-	VirtualGraph      ResourceType = "virtual-graph"
-	DataSource        ResourceType = "data-source"
-	ServerAdmin       ResourceType = "dbms-admin"
-	DatabaseAdmin     ResourceType = "admin"
-	SensitiveProperty ResourceType = "sensitive-properties"
-	StoredQuery       ResourceType = "stored-query"
-	AllResourceTypes  ResourceType = "*"
-)
-
-// NewPermission is a helper function to create a Permission to be granted/revoked
-func NewPermission(action Action, resourceType ResourceType, resource []string) *Permission {
-	permission := Permission{
-		Action:       string(action),
-		ResourceType: string(resourceType),
-		Resource:     resource,
+func permissionActionValues() [9]string {
+	return [9]string{
+		PermissionActionUnknown: "UNKNOWN",
+		PermissionActionRead:    "read",
+		PermissionActionWrite:   "write",
+		PermissionActionCreate:  "create",
+		PermissionActionDelete:  "delete",
+		PermissionActionGrant:   "grant",
+		PermissionActionRevoke:  "revoke",
+		PermissionActionExecute: "execute",
+		PermissionActionAll:     "all",
 	}
-	return &permission
+}
+
+// Valid returns if a given PermissionAction is known (valid) or not.
+func (p PermissionAction) Valid() bool {
+	return !(p <= PermissionActionUnknown || int(p) >= len(permissionActionValues()))
+}
+
+// String will return the string representation of the PermissionAction
+func (a PermissionAction) String() string {
+	if !a.Valid() {
+		return permissionActionValues()[PermissionActionUnknown]
+	}
+	return permissionActionValues()[a]
+}
+
+// indexOf returns the index of the first occurrence of the target in the arr.
+func indexOf(arr []string, target string) int {
+	for i, s := range arr {
+		if s == target {
+			return i
+		}
+	}
+	return -1
+}
+
+func (a PermissionAction) MarshalText() ([]byte, error) {
+	return []byte(a.String()), nil
+}
+
+// UnmarshalText returns an unmarshaled textual representation of the PermissionAction
+func (a *PermissionAction) UnmarshalText(text []byte) error {
+  valsArr := permissionActionValues()
+  valsSlice := valsArr[:]
+  index := indexOf(valsSlice, strings.ToLower(string(text)))
+  *a = PermissionAction(index)
+	return nil
+}
+
+// PermissionResourceType represents the [resource type] in a Stardog permission.
+// The zero value for a PermissionResourceType is [PermissionResourceTypeUnknown]
+//
+// [resource type]: https://docs.stardog.com/operating-stardog/security/security-model#resources
+type PermissionResourceType int
+
+// All available resource types for a permission
+const (
+	PermissionResourceTypeUnknown PermissionResourceType = iota
+	PermissionResourceTypeDatabase
+	PermissionResourceTypeMetadata
+	PermissionResourceTypeUser
+	PermissionResourceTypeRole
+	PermissionResourceTypeNamedGraph
+	PermissionResourceTypeVirtualGraph
+	PermissionResourceTypeDataSource
+	PermissionResourceTypeServeradmin
+	PermissionResourceTypeDatabaseAdmin
+	PermissionResourceTypeSensitiveProperty
+	PermissionResourceTypeStoredQuery
+	PermissionResourceTypeAll
+)
+
+func permissionResourceTypeValues() [13]string {
+	return [13]string{
+		PermissionResourceTypeUnknown:           "UNKNOWN",
+		PermissionResourceTypeDatabase:          "db",
+		PermissionResourceTypeMetadata:          "metadata",
+		PermissionResourceTypeUser:              "user",
+		PermissionResourceTypeRole:              "role",
+		PermissionResourceTypeNamedGraph:        "named-graph",
+		PermissionResourceTypeVirtualGraph:      "virtual-graph",
+		PermissionResourceTypeDataSource:        "data-source",
+		PermissionResourceTypeServeradmin:       "dbms-admin",
+		PermissionResourceTypeDatabaseAdmin:     "admin",
+		PermissionResourceTypeSensitiveProperty: "sensitive-property",
+		PermissionResourceTypeStoredQuery:       "stored-query",
+		PermissionResourceTypeAll:               "*",
+	}
+}
+
+// Valid returns if a given PermissionResourceType is known (valid) or not.
+func (p PermissionResourceType) Valid() bool {
+	return !(p <= PermissionResourceTypeUnknown || int(p) >= len(permissionResourceTypeValues()))
+}
+
+// String will return the string representation of the PermissionResourceType
+func (r PermissionResourceType) String() string {
+	if !r.Valid() {
+		return permissionResourceTypeValues()[PermissionResourceTypeUnknown]
+	}
+	return permissionResourceTypeValues()[r]
+}
+
+func (r PermissionResourceType) MarshalText() ([]byte, error) {
+	return []byte(r.String()), nil
+}
+
+func (r *PermissionResourceType) UnmarshalText(text []byte) error {
+  valsArr := permissionResourceTypeValues()
+  valsSlice := valsArr[:]
+  index := indexOf(valsSlice, strings.ToLower(string(text)))
+  *r = PermissionResourceType(index)
+	return nil
 }
 
 // Permission represents a user/role permission.
@@ -137,10 +230,10 @@ func NewPermission(action Action, resourceType ResourceType, resource []string) 
 // a permission you should not provide a value for 'explicit'. The NewPermission function is provided
 // for when you need construct a permission to be granted/revoked.
 type Permission struct {
-	Action       string   `json:"action"`
-	ResourceType string   `json:"resource_type"`
-	Resource     []string `json:"resource"`
-	Explicit     *bool    `json:"explicit,omitempty"`
+	Action       PermissionAction       `json:"action"`
+	ResourceType PermissionResourceType `json:"resource_type"`
+	Resource     []string               `json:"resource"`
+	Explicit     *bool                  `json:"explicit,omitempty"`
 }
 
 // GetUsers returns the name of all users in the server
@@ -178,7 +271,7 @@ func (s *SecurityService) GetUsersWithDetails(ctx context.Context) ([]UserDetail
 		return nil, nil, err
 	}
 
-	var userListWithDetails *getUsersWithDetailsResponse
+	var userListWithDetails getUsersWithDetailsResponse
 	resp, err := s.client.Do(ctx, req, &userListWithDetails)
 	if err != nil {
 		return nil, resp, err
