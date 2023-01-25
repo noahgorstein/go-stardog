@@ -1,4 +1,5 @@
 # go-stardog
+![Coverage](https://img.shields.io/badge/Coverage-96.2%25-brightgreen)
 
 ![go-stardog](https://user-images.githubusercontent.com/23270779/175647530-ae5a8681-87a6-471d-a03a-4c700610483d.jpg)
 
