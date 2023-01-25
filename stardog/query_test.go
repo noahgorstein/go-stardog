@@ -139,6 +139,186 @@ func TestSparqlService_Select_noReturnFormatSpecified(t *testing.T) {
 	}
 }
 
+func TestSparqlService_Construct(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	wantRDF := `
+  {
+      <tag:stardog:api:catalog:hasSchema> <https://schema.org/rangeIncludes> <tag:stardog:api:catalog:DatabaseSchema> .
+      <tag:stardog:api:catalog:owningDatabase> <https://schema.org/rangeIncludes> <http://www.w3.org/2001/XMLSchema#string> .
+      <tag:stardog:api:catalog:hasMapping> <https://schema.org/rangeIncludes> <tag:stardog:api:catalog:Mapping> .
+      <http://www.w3.org/ns/r2rml#sqlQuery> <https://schema.org/rangeIncludes> <http://www.w3.org/2001/XMLSchema#string> .
+      <http://www.w3.org/ns/r2rml#class> <https://schema.org/rangeIncludes> <http://www.w3.org/2001/XMLSchema#string> .
+      <http://www.w3.org/ns/r2rml#objectMap> <https://schema.org/rangeIncludes> <http://www.w3.org/ns/r2rml#ObjectMap> .
+      <tag:stardog:api:catalog:hasTable> <https://schema.org/rangeIncludes> <tag:stardog:api:catalog:Table> .
+      <tag:stardog:api:catalog:mappingName> <https://schema.org/rangeIncludes> <http://www.w3.org/2001/XMLSchema#string> .
+      <tag:stardog:api:catalog:connectsTo> <https://schema.org/rangeIncludes> <tag:stardog:api:catalog:DataSource> .
+      <http://www.w3.org/ns/r2rml#termType> <https://schema.org/rangeIncludes> <http://www.w3.org/2001/XMLSchema#string> .
+  }
+  `
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/%s/query", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", mediaTypeApplicationTrig)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(wantRDF))
+	})
+
+	ctx := context.Background()
+	query := `
+  CONSTRUCT{ ?s ?p ?o } WHERE { ?s ?p ?o }
+  `
+
+	queryOpts := &ConstructOptions{
+		ResultFormat: RDFFormatTrig,
+		Limit:        10,
+	}
+
+	got, _, err := client.Sparql.Construct(ctx, db, query, queryOpts)
+	if err != nil {
+		t.Errorf("Sparql.Construct returned error: %v", err)
+	}
+
+	if want := wantRDF; !cmp.Equal(got.String(), want) {
+		t.Errorf("Sparql.Construct = %+v, want %+v", got, want)
+	}
+
+	const methodName = "Construct"
+	testBadOptions(t, methodName, func() (err error) {
+		_, _, err = client.Sparql.Construct(ctx, "\n", "\n", queryOpts)
+		return err
+	})
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.Sparql.Construct(nil, db, query, nil)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func TestSparqlService_Construct_invalidOrMissingReturnFormatReturnsTrig(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	wantRDF := `
+  {
+      <tag:stardog:api:catalog:hasSchema> <https://schema.org/rangeIncludes> <tag:stardog:api:catalog:DatabaseSchema> .
+      <tag:stardog:api:catalog:owningDatabase> <https://schema.org/rangeIncludes> <http://www.w3.org/2001/XMLSchema#string> .
+      <tag:stardog:api:catalog:hasMapping> <https://schema.org/rangeIncludes> <tag:stardog:api:catalog:Mapping> .
+      <http://www.w3.org/ns/r2rml#sqlQuery> <https://schema.org/rangeIncludes> <http://www.w3.org/2001/XMLSchema#string> .
+      <http://www.w3.org/ns/r2rml#class> <https://schema.org/rangeIncludes> <http://www.w3.org/2001/XMLSchema#string> .
+      <http://www.w3.org/ns/r2rml#objectMap> <https://schema.org/rangeIncludes> <http://www.w3.org/ns/r2rml#ObjectMap> .
+      <tag:stardog:api:catalog:hasTable> <https://schema.org/rangeIncludes> <tag:stardog:api:catalog:Table> .
+      <tag:stardog:api:catalog:mappingName> <https://schema.org/rangeIncludes> <http://www.w3.org/2001/XMLSchema#string> .
+      <tag:stardog:api:catalog:connectsTo> <https://schema.org/rangeIncludes> <tag:stardog:api:catalog:DataSource> .
+      <http://www.w3.org/ns/r2rml#termType> <https://schema.org/rangeIncludes> <http://www.w3.org/2001/XMLSchema#string> .
+  }
+  `
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/%s/query", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", mediaTypeApplicationTrig)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(wantRDF))
+	})
+
+	ctx := context.Background()
+	query := `
+  CONSTRUCT{ ?s ?p ?o } WHERE { ?s ?p ?o }
+  `
+
+	_, _, err := client.Sparql.Construct(ctx, db, query, nil)
+	if err != nil {
+		t.Errorf("Sparql.Construct returned error: %v", err)
+	}
+
+	invalidRDFFormat := RDFFormat(100)
+	if invalidRDFFormat.Valid() {
+		t.Errorf("should be an invalid RDFFormat")
+	}
+
+	constructOpts := &ConstructOptions{
+		ResultFormat: invalidRDFFormat,
+	}
+	_, _, err = client.Sparql.Construct(ctx, db, query, constructOpts)
+	if err != nil {
+		t.Errorf("Sparql.Construct returned error: %v", err)
+	}
+}
+
+func TestSparqlService_Ask(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	wantResp := newTrue()
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/%s/query", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", mediaTypeBoolean)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("true"))
+
+		t.Log(r.RequestURI)
+	})
+
+	ctx := context.Background()
+	query := `
+  ASK { ?s a ?o }
+  `
+
+	got, _, err := client.Sparql.Ask(ctx, db, query, nil)
+	if err != nil {
+		t.Errorf("Sparql.Ask returned error: %v", err)
+	}
+	if want := wantResp; !cmp.Equal(got, want) {
+		t.Errorf("Sparql.Ask = %+v, want %+v", got, want)
+	}
+
+	const methodName = "Ask"
+	testBadOptions(t, methodName, func() (err error) {
+		_, _, err = client.Sparql.Ask(ctx, "\n", "\n", &AskOptions{})
+		return err
+	})
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.Sparql.Ask(nil, db, query, nil)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
+func TestSparqlService_Ask_noBooleanResponse(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/%s/query", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", mediaTypeBoolean)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("frodo"))
+	})
+
+	ctx := context.Background()
+	query := `
+  ASK { ?s a ?o }
+  `
+	_, _, err := client.Sparql.Ask(ctx, db, query, nil)
+	if err == nil {
+		t.Error("Sparql.Ask should return error failing to parse non-boolean response")
+	}
+}
+
 func TestSparqlService_Explain(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()

@@ -304,6 +304,8 @@ func (s *SPARQLService) Construct(ctx context.Context, database string, query st
 		} else {
 			headerOpts.Accept = RDFFormatTrig.String()
 		}
+	} else {
+		headerOpts.Accept = RDFFormatTrig.String()
 	}
 
 	req, err := s.client.NewRequest(http.MethodGet, urlWithOptions, &headerOpts, nil)
