@@ -73,7 +73,7 @@ func main() {
 
 	opts := &stardog.ExportObfuscatedDataOptions{
 		NamedGraph:        []string{"tag:stardog:api:context:default"},
-		Format:            stardog.Trig,
+		Format:            stardog.RDFFormatTurtle,
 		ObfuscationConfig: obfuscationConfig,
 	}
 

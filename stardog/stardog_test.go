@@ -48,7 +48,7 @@ func setup() (client *Client, mux *http.ServeMux, serverURL string, teardown fun
 
 	// client is the Stardog client being tested and is
 	// configured to use test server.
-	client, _ = NewClient(DefaultServerURL, nil)
+	client, _ = NewClient(defaultServerURL, nil)
 	url, _ := url.Parse(server.URL + baseURLPath + "/")
 	client.baseURL = url
 
@@ -74,16 +74,16 @@ func newInt(i int) *int {
 }
 
 func TestNewClient(t *testing.T) {
-	c, _ := NewClient(DefaultServerURL, nil)
+	c, _ := NewClient(defaultServerURL, nil)
 
-	if got, want := c.baseURL.String(), DefaultServerURL; got != want {
+	if got, want := c.baseURL.String(), defaultServerURL; got != want {
 		t.Errorf("NewClient BaseURL is %v, want %v", got, want)
 	}
 	if got, want := c.UserAgent, defaultUserAgent; got != want {
 		t.Errorf("NewClient UserAgent is %v, want %v", got, want)
 	}
 
-	c2, _ := NewClient(DefaultServerURL, nil)
+	c2, _ := NewClient(defaultServerURL, nil)
 	if c.client == c2.client {
 		t.Error("NewClient returned same http.Clients, but they should differ")
 	}
@@ -108,7 +108,7 @@ func TestNewClient_invalidServerURL(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	c, _ := NewClient(DefaultServerURL, nil)
+	c, _ := NewClient(defaultServerURL, nil)
 	c2 := c.Client()
 	if c.client == c2 {
 		t.Error("Client returned same http.Client, but should be different")
@@ -180,9 +180,9 @@ func testBadOptions(t *testing.T, methodName string, f func() error) {
 }
 
 func TestNewRequest(t *testing.T) {
-	c, _ := NewClient(DefaultServerURL, nil)
+	c, _ := NewClient(defaultServerURL, nil)
 
-	inURL, outURL := "/foo", DefaultServerURL+"foo"
+	inURL, outURL := "/foo", defaultServerURL+"foo"
 	inBody, outBody := &isEnabledResponse{Enabled: true}, `{"enabled":true}`+"\n"
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
@@ -210,7 +210,7 @@ func TestNewRequest(t *testing.T) {
 }
 
 func TestNewRequest_invalidJSON(t *testing.T) {
-	c, _ := NewClient(DefaultServerURL, nil)
+	c, _ := NewClient(defaultServerURL, nil)
 
 	type T struct {
 		A map[interface{}]interface{}
@@ -240,7 +240,7 @@ func testURLParseError(t *testing.T, err error) {
 }
 
 func TestNewMultipartFormDataRequest_badURL(t *testing.T) {
-	c, _ := NewClient(DefaultServerURL, nil)
+	c, _ := NewClient(defaultServerURL, nil)
 	headerOpts := requestHeaderOptions{
 		ContentType: "multipart/form-data 12345",
 	}
@@ -249,7 +249,7 @@ func TestNewMultipartFormDataRequest_badURL(t *testing.T) {
 }
 
 func TestNewMultipartFormDataRequest_missingMultiPartFormHeader(t *testing.T) {
-	c, _ := NewClient(DefaultServerURL, nil)
+	c, _ := NewClient(defaultServerURL, nil)
 	_, err := c.NewMultipartFormDataRequest("GET", "hello/world", nil, nil)
 	if err == nil {
 		t.Error("NewMultipartFormDataRequest should throw an error if 'Content-Type' header doesn't contain 'multipart/form-data'")
@@ -257,7 +257,7 @@ func TestNewMultipartFormDataRequest_missingMultiPartFormHeader(t *testing.T) {
 }
 
 func TestNewRequest_badURL(t *testing.T) {
-	c, _ := NewClient(DefaultServerURL, nil)
+	c, _ := NewClient(defaultServerURL, nil)
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
@@ -266,7 +266,7 @@ func TestNewRequest_badURL(t *testing.T) {
 }
 
 func TestNewRequest_badMethod(t *testing.T) {
-	c, _ := NewClient(DefaultServerURL, nil)
+	c, _ := NewClient(defaultServerURL, nil)
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
 	}
@@ -447,7 +447,7 @@ func TestBasicAuthTransport(t *testing.T) {
 		Username: username,
 		Password: password,
 	}
-	basicAuthClient, _ := NewClient(DefaultServerURL, tp.Client())
+	basicAuthClient, _ := NewClient(defaultServerURL, tp.Client())
 	basicAuthClient.baseURL = client.baseURL
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -502,7 +502,7 @@ func TestBearerAuthTransport(t *testing.T) {
 	tp := &BearerAuthTransport{
 		BearerToken: "12345",
 	}
-	bearerAuthClient, _ := NewClient(DefaultServerURL, tp.Client())
+	bearerAuthClient, _ := NewClient(defaultServerURL, tp.Client())
 	bearerAuthClient.baseURL = client.baseURL
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -651,7 +651,7 @@ func TestErrorResponse_Error(t *testing.T) {
 }
 
 func TestNewRequest_emptyBody(t *testing.T) {
-	c, _ := NewClient(DefaultServerURL, nil)
+	c, _ := NewClient(defaultServerURL, nil)
 	var i interface{}
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,

@@ -65,8 +65,7 @@ func main() {
 
 	opts := &stardog.ExportDataOptions{
 		NamedGraph: []string{"tag:stardog:api:context:default"},
-		Format:     stardog.Trig,
-		ServerSide: true,
+		Format:     stardog.RDFFormatTurtle,
 	}
 
 	buf, _, err := client.DatabaseAdmin.ExportData(context.Background(), database, opts)
@@ -80,7 +79,7 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("Successfully exported database: \"%s\"\n", database)
-	fmt.Println("-------DATA (TriG Format)-------")
+	fmt.Println("-------DATA (Turtle Format)-------")
 	if buf != nil {
 		fmt.Println(buf.String())
 	}
