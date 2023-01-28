@@ -11,6 +11,50 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func TestPermissionAction_Valid(t *testing.T) {
+	r := PermissionAction(100)
+	if r.Valid() {
+		t.Errorf("should be an invalid PermissionAction")
+	}
+	if r.String() != PermissionActionUnknown.String() {
+		t.Errorf("PermissionAction string value should be unknown")
+	}
+}
+
+func TestPermissionResourceType_Valid(t *testing.T) {
+	r := PermissionResourceType(100)
+	if r.Valid() {
+		t.Errorf("should be an invalid PermissionResourceType")
+	}
+	if r.String() != PermissionResourceTypeUnknown.String() {
+		t.Errorf("PermissionResourceType string value should be unknown")
+	}
+}
+
+func TestPermissionAction_UnmarshalText(t *testing.T) {
+	r := PermissionActionWrite
+	r.UnmarshalText([]byte("write"))
+	if r != PermissionActionWrite {
+		t.Error("should still be PermissionActionWrite")
+	}
+	r.UnmarshalText([]byte("trite"))
+	if r.Valid() {
+		t.Error("should be an invalid PermissionAction")
+	}
+}
+
+func TestPermissionResourceType_UnmarshalText(t *testing.T) {
+	r := PermissionResourceTypeDatabaseAdmin
+	r.UnmarshalText([]byte("admin"))
+	if r != PermissionResourceTypeDatabaseAdmin {
+		t.Error("should still be PermissionResourceTypeDatabaseAdmin")
+	}
+	r.UnmarshalText([]byte("trite"))
+	if r.Valid() {
+		t.Error("should be an invalid PermissionResourceType")
+	}
+}
+
 func Test_GetUsers(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
@@ -83,24 +127,25 @@ func Test_GetUsersWithDetails(t *testing.T) {
 	wantUsers := &getUsersWithDetailsResponse{
 		Users: []UserDetails{
 			{
-				Username:    newString("admin"),
-				Roles:       []string{},
-				Enabled:     true,
-				Superuser:   true,
-				Permissions: []Permission{},
+				Username:             newString("admin"),
+				Roles:                []string{},
+				Enabled:              true,
+				Superuser:            true,
+				EffectivePermissions: []EffectivePermission{},
 			},
 			{
 				Username:  newString("frodo"),
 				Roles:     []string{"reader", "writer", "creator"},
 				Enabled:   true,
 				Superuser: false,
-				Permissions: []Permission{
+				EffectivePermissions: []EffectivePermission{
 					{
-						Explicit:     newTrue(),
-						Action:       PermissionActionRead,
-						ResourceType: PermissionResourceTypeDatabase,
-						Resource:     []string{"myDatabase"},
-					},
+						Explicit: true,
+						Permission: Permission{
+							Action:       PermissionActionRead,
+							ResourceType: PermissionResourceTypeDatabase,
+							Resource:     []string{"myDatabase"},
+						}},
 				},
 			},
 		},
@@ -183,12 +228,14 @@ func Test_GetUserEffectivePermissions(t *testing.T) {
       {"action":"DELETE","resource_type":"named-graph","resource":["db1"], "explicit": false}
       ]
     }`
-	var wantUserEffectivePermissions = []Permission{
+	var wantUserEffectivePermissions = []EffectivePermission{
 		{
-			Action:       PermissionActionDelete,
-			ResourceType: PermissionResourceTypeNamedGraph,
-			Resource:     []string{"db1"},
-			Explicit:     newFalse()},
+			Permission: Permission{
+				Action:       PermissionActionDelete,
+				ResourceType: PermissionResourceTypeNamedGraph,
+				Resource:     []string{"db1"},
+			},
+			Explicit: false},
 	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/effective/user/%s", "bob"), func(w http.ResponseWriter, r *http.Request) {
@@ -257,22 +304,31 @@ func Test_GetUserDetails(t *testing.T) {
 		Enabled:   true,
 		Superuser: false,
 		Roles:     []string{},
-		Permissions: []Permission{
+		EffectivePermissions: []EffectivePermission{
 			{
-				Action:       PermissionActionRead,
-				ResourceType: PermissionResourceTypeDatabase,
-				Resource:     []string{"myDatabase"},
-				Explicit:     newTrue()},
+				Permission: Permission{
+					Action:       PermissionActionRead,
+					ResourceType: PermissionResourceTypeDatabase,
+					Resource:     []string{"myDatabase"},
+				},
+				Explicit: true,
+			},
 			{
-				Action:       PermissionActionRead,
-				ResourceType: PermissionResourceTypeUser,
-				Resource:     []string{"frodo"},
-				Explicit:     newTrue()},
+				Permission: Permission{
+					Action:       PermissionActionRead,
+					ResourceType: PermissionResourceTypeUser,
+					Resource:     []string{"frodo"},
+				},
+				Explicit: true,
+			},
 			{
-				Action:       PermissionActionWrite,
-				ResourceType: PermissionResourceTypeUser,
-				Resource:     []string{"frodo"},
-				Explicit:     newTrue()},
+				Permission: Permission{
+					Action:       PermissionActionWrite,
+					ResourceType: PermissionResourceTypeUser,
+					Resource:     []string{"frodo"},
+				},
+				Explicit: true,
+			},
 		},
 	}
 	mux.HandleFunc(fmt.Sprintf("/admin/users/%s", "bob"), func(w http.ResponseWriter, r *http.Request) {
@@ -466,6 +522,38 @@ func Test_EnableUser(t *testing.T) {
 		testMethod(t, r, "PUT")
 		testHeader(t, r, "Content-Type", "application/json")
 
+		want := &enableUserRequest{Enabled: true}
+		if !cmp.Equal(v, want) {
+			t.Errorf("Request body = %+v, want %+v", v, want)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ctx := context.Background()
+	_, err := client.Security.EnableUser(ctx, username)
+	if err != nil {
+		t.Errorf("Security.EnableUser returned error: %v", err)
+	}
+
+	const methodName = "EnableUser"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		return client.Security.EnableUser(nil, username)
+	})
+}
+
+func Test_DisableUser(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	var username = "frodo"
+
+	mux.HandleFunc(fmt.Sprintf("/admin/users/%s/enabled", username), func(w http.ResponseWriter, r *http.Request) {
+		v := new(enableUserRequest)
+		json.NewDecoder(r.Body).Decode(v)
+		testMethod(t, r, "PUT")
+		testHeader(t, r, "Content-Type", "application/json")
+
 		want := &enableUserRequest{Enabled: false}
 		if !cmp.Equal(v, want) {
 			t.Errorf("Request body = %+v, want %+v", v, want)
@@ -475,14 +563,14 @@ func Test_EnableUser(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_, err := client.Security.EnableUser(ctx, username, false)
+	_, err := client.Security.DisableUser(ctx, username)
 	if err != nil {
-		t.Errorf("Security.SetEnabled returned error: %v", err)
+		t.Errorf("Security.DisableUser returned error: %v", err)
 	}
 
-	const methodName = "SetEnabled"
+	const methodName = "DisableUser"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.Security.EnableUser(nil, "someone", false)
+		return client.Security.DisableUser(nil, username)
 	})
 }
 

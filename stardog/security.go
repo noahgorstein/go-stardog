@@ -10,13 +10,13 @@ import (
 // SecurityService handles communication with the security related methods of the Stardog API.
 type SecurityService service
 
-// UserDetails represents all details about a Stardog user
+// UserDetails contains all details about a Stardog user
 type UserDetails struct {
-	Username    *string      `json:"username,omitempty"`
-	Enabled     bool         `json:"enabled"`
-	Superuser   bool         `json:"superuser"`
-	Roles       []string     `json:"roles"`
-	Permissions []Permission `json:"permissions"`
+	Username             *string               `json:"username,omitempty"`
+	Enabled              bool                  `json:"enabled"`
+	Superuser            bool                  `json:"superuser"`
+	Roles                []string              `json:"roles"`
+	EffectivePermissions []EffectivePermission `json:"permissions"`
 }
 
 type getUsersResponse struct {
@@ -33,6 +33,10 @@ type isEnabledResponse struct {
 
 type userPermissionsResponse struct {
 	Permissions []Permission `json:"permissions"`
+}
+
+type getUsersEffectivePermissionsResponse struct {
+	EffectivePermissions []EffectivePermission `json:"permissions"`
 }
 
 type createUserRequest struct {
@@ -56,7 +60,7 @@ type getRolesWithDetailsResponse struct {
 	Roles []RoleDetails `json:"roles"`
 }
 
-// RoleDetails represents details about a role
+// RoleDetails contains details about a role
 type RoleDetails struct {
 	Rolename    string       `json:"rolename"`
 	Permissions []Permission `json:"permissions"`
@@ -70,7 +74,7 @@ type rolePermissionsResponse struct {
 	Permissions []Permission `json:"permissions"`
 }
 
-// DeleteRoleOptions specifies the optional parameters to the SecurityService.DeleteRole method.
+// DeleteRoleOptions specifies the optional parameters to the [SecurityService.DeleteRole] method.
 type DeleteRoleOptions struct {
 	// useful if you want to remove the role and it is currently assigned to users
 	Force bool `url:"force"`
@@ -86,6 +90,27 @@ type overwriteRolesRequest struct {
 
 type getUsersWithDetailsResponse struct {
 	Users []UserDetails `json:"users"`
+}
+
+// Permission represents a user/role permission.
+//
+// Stardog [security model] states that a user/role can be perform an action (e.g. read)
+// over a resource (e.g. db:myDatabase).
+//
+// [security model]: https://docs.stardog.com/operating-stardog/security/security-model#permissions
+type Permission struct {
+	// the access level (e.g. PermissionActionRead)
+	Action PermissionAction `json:"action"`
+	// the type of resource (e.g. PermissionResourceTypeDatabase)
+	ResourceType PermissionResourceType `json:"resource_type"`
+	// the resource identifier (e.g. myDatabase)
+	Resource []string `json:"resource"`
+}
+
+// EffectivePermission represents a user
+type EffectivePermission struct {
+	Permission
+	Explicit bool `json:"explicit"`
 }
 
 // PermissionAction represents the [action] in a Stardog permission.
@@ -107,9 +132,13 @@ const (
 	PermissionActionAll
 )
 
+// permissionActionValues returns an array mapping each
+// PermissionAction to its string value
+//
+//revive:disable:add-constant
 func permissionActionValues() [9]string {
 	return [9]string{
-		PermissionActionUnknown: "UNKNOWN",
+		PermissionActionUnknown: "",
 		PermissionActionRead:    "read",
 		PermissionActionWrite:   "write",
 		PermissionActionCreate:  "create",
@@ -121,39 +150,32 @@ func permissionActionValues() [9]string {
 	}
 }
 
+//revive:enable:add-constant
+
 // Valid returns if a given PermissionAction is known (valid) or not.
 func (p PermissionAction) Valid() bool {
 	return !(p <= PermissionActionUnknown || int(p) >= len(permissionActionValues()))
 }
 
 // String will return the string representation of the PermissionAction
-func (a PermissionAction) String() string {
-	if !a.Valid() {
+func (p PermissionAction) String() string {
+	if !p.Valid() {
 		return permissionActionValues()[PermissionActionUnknown]
 	}
-	return permissionActionValues()[a]
+	return permissionActionValues()[p]
 }
 
-// indexOf returns the index of the first occurrence of the target in the arr.
-func indexOf(arr []string, target string) int {
-	for i, s := range arr {
-		if s == target {
-			return i
-		}
-	}
-	return -1
+// MarshalText implements TextMarshaler and is invoked when encoding the PermissionAction to JSON.
+func (p PermissionAction) MarshalText() ([]byte, error) {
+	return []byte(p.String()), nil
 }
 
-func (a PermissionAction) MarshalText() ([]byte, error) {
-	return []byte(a.String()), nil
-}
-
-// UnmarshalText returns an unmarshaled textual representation of the PermissionAction
-func (a *PermissionAction) UnmarshalText(text []byte) error {
-  valsArr := permissionActionValues()
-  valsSlice := valsArr[:]
-  index := indexOf(valsSlice, strings.ToLower(string(text)))
-  *a = PermissionAction(index)
+// UnmarshalText implements TextUnmarshaler and is invoked when decoding JSON to PermissionAction.
+func (p *PermissionAction) UnmarshalText(text []byte) error {
+	valsArr := permissionActionValues()
+	valsSlice := valsArr[:]
+	index := indexOf(valsSlice, strings.ToLower(string(text)))
+	*p = PermissionAction(index)
 	return nil
 }
 
@@ -180,6 +202,10 @@ const (
 	PermissionResourceTypeAll
 )
 
+// permissionResourceTypeValues returns an array mapping each
+// PermissionResourceTypeAction to its string value
+//
+//revive:disable:add-constant
 func permissionResourceTypeValues() [13]string {
 	return [13]string{
 		PermissionResourceTypeUnknown:           "UNKNOWN",
@@ -198,42 +224,33 @@ func permissionResourceTypeValues() [13]string {
 	}
 }
 
+//revive:enable:add-constant
+
 // Valid returns if a given PermissionResourceType is known (valid) or not.
 func (p PermissionResourceType) Valid() bool {
 	return !(p <= PermissionResourceTypeUnknown || int(p) >= len(permissionResourceTypeValues()))
 }
 
 // String will return the string representation of the PermissionResourceType
-func (r PermissionResourceType) String() string {
-	if !r.Valid() {
+func (p PermissionResourceType) String() string {
+	if !p.Valid() {
 		return permissionResourceTypeValues()[PermissionResourceTypeUnknown]
 	}
-	return permissionResourceTypeValues()[r]
+	return permissionResourceTypeValues()[p]
 }
 
-func (r PermissionResourceType) MarshalText() ([]byte, error) {
-	return []byte(r.String()), nil
+// MarshalText implements TextMarshaler and is invoked when encoding the PermissionResourceType to JSON.
+func (p PermissionResourceType) MarshalText() ([]byte, error) {
+	return []byte(p.String()), nil
 }
 
-func (r *PermissionResourceType) UnmarshalText(text []byte) error {
-  valsArr := permissionResourceTypeValues()
-  valsSlice := valsArr[:]
-  index := indexOf(valsSlice, strings.ToLower(string(text)))
-  *r = PermissionResourceType(index)
+// UnmarshalText implements TextUnmarshaler and is invoked when decoding JSON to PermissionResourceType.
+func (p *PermissionResourceType) UnmarshalText(text []byte) error {
+	valsArr := permissionResourceTypeValues()
+	valsSlice := valsArr[:]
+	index := indexOf(valsSlice, strings.ToLower(string(text)))
+	*p = PermissionResourceType(index)
 	return nil
-}
-
-// Permission represents a user/role permission.
-//
-// Some read-only methods will return an optional 'explicit' field indicating if the permission
-// was explicitly granted to the user or if it is implicitly granted via a role. When granting/revoking
-// a permission you should not provide a value for 'explicit'. The NewPermission function is provided
-// for when you need construct a permission to be granted/revoked.
-type Permission struct {
-	Action       PermissionAction       `json:"action"`
-	ResourceType PermissionResourceType `json:"resource_type"`
-	Resource     []string               `json:"resource"`
-	Explicit     *bool                  `json:"explicit,omitempty"`
 }
 
 // GetUsers returns the name of all users in the server
@@ -249,7 +266,7 @@ func (s *SecurityService) GetUsers(ctx context.Context) ([]string, *Response, er
 		return nil, nil, err
 	}
 
-	var usersResponse *getUsersResponse
+	var usersResponse getUsersResponse
 	resp, err := s.client.Do(ctx, req, &usersResponse)
 	if err != nil {
 		return nil, resp, err
@@ -280,7 +297,7 @@ func (s *SecurityService) GetUsersWithDetails(ctx context.Context) ([]UserDetail
 }
 
 // GetUserPermissions returns the permissions explicitly assigned to user. Permissions granted to a user via role assignment
-// will not be contained in the response. Use GetUserEffectivePermissions for that.
+// will not be contained in the response. Use [SecurityService.GetUserEffectivePermissions] for that.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/getUserPermissions
 func (s *SecurityService) GetUserPermissions(ctx context.Context, username string) ([]Permission, *Response, error) {
@@ -293,7 +310,7 @@ func (s *SecurityService) GetUserPermissions(ctx context.Context, username strin
 		return nil, nil, err
 	}
 
-	var getUserPermissionsResponse *userPermissionsResponse
+	var getUserPermissionsResponse userPermissionsResponse
 	resp, err := s.client.Do(ctx, request, &getUserPermissionsResponse)
 	if err != nil {
 		return nil, resp, err
@@ -304,7 +321,7 @@ func (s *SecurityService) GetUserPermissions(ctx context.Context, username strin
 // GetUserEffectivePermissions returns permissions explicitly assigned to a user and via role assignment.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/getEffectiveUserPermissions
-func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, username string) ([]Permission, *Response, error) {
+func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, username string) ([]EffectivePermission, *Response, error) {
 	u := fmt.Sprintf("admin/permissions/effective/user/%s", username)
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -314,13 +331,13 @@ func (s *SecurityService) GetUserEffectivePermissions(ctx context.Context, usern
 		return nil, nil, err
 	}
 
-	var getUserPermissionsResponse *userPermissionsResponse
-	resp, err := s.client.Do(ctx, request, &getUserPermissionsResponse)
+	var getUsersEffectivePermissionsResponse getUsersEffectivePermissionsResponse
+	resp, err := s.client.Do(ctx, request, &getUsersEffectivePermissionsResponse)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return getUserPermissionsResponse.Permissions, resp, nil
+	return getUsersEffectivePermissionsResponse.EffectivePermissions, resp, nil
 }
 
 // GetUserDetails returns user attributes (enabled and superuser), roles assigned to the user, and the user's
@@ -338,16 +355,16 @@ func (s *SecurityService) GetUserDetails(ctx context.Context, username string) (
 		return nil, nil, err
 	}
 
-	var getUserDetailsResponse *UserDetails
+	var getUserDetailsResponse UserDetails
 	resp, err := s.client.Do(ctx, request, &getUserDetailsResponse)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return getUserDetailsResponse, resp, nil
+	return &getUserDetailsResponse, resp, nil
 }
 
-// IsSuperuser returns whether a the user is a superuser or not
+// IsSuperuser returns whether the user is a superuser or not
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/isSuper
 func (s *SecurityService) IsSuperuser(ctx context.Context, username string) (*bool, *Response, error) {
@@ -360,7 +377,7 @@ func (s *SecurityService) IsSuperuser(ctx context.Context, username string) (*bo
 		return nil, nil, err
 	}
 
-	var isSuperuserResponse *isSuperuserResponse
+	var isSuperuserResponse isSuperuserResponse
 	resp, err := s.client.Do(ctx, request, &isSuperuserResponse)
 	if err != nil {
 		return nil, resp, err
@@ -382,7 +399,7 @@ func (s *SecurityService) IsEnabled(ctx context.Context, username string) (*bool
 		return nil, nil, err
 	}
 
-	var isEnabledResponse *isEnabledResponse
+	var isEnabledResponse isEnabledResponse
 	resp, err := s.client.Do(ctx, request, &isEnabledResponse)
 	if err != nil {
 		return nil, resp, err
@@ -443,16 +460,16 @@ func (s *SecurityService) ChangeUserPassword(ctx context.Context, username strin
 	return s.client.Do(ctx, request, nil)
 }
 
-// EnableUser enables/disables a user.
+// EnableUser enables a user.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/setUserEnabled
-func (s *SecurityService) EnableUser(ctx context.Context, username string, enabled bool) (*Response, error) {
+func (s *SecurityService) EnableUser(ctx context.Context, username string) (*Response, error) {
 	url := fmt.Sprintf("admin/users/%s/enabled", username)
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 	}
 	reqBody := enableUserRequest{
-		Enabled: enabled,
+		Enabled: true,
 	}
 
 	req, err := s.client.NewRequest(http.MethodPut, url, &headerOpts, reqBody)
@@ -462,7 +479,26 @@ func (s *SecurityService) EnableUser(ctx context.Context, username string, enabl
 	return s.client.Do(ctx, req, nil)
 }
 
-// GrantUserPermission grants a permission directly to a user.
+// DisableUser disables a user.
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Users/operation/setUserEnabled
+func (s *SecurityService) DisableUser(ctx context.Context, username string) (*Response, error) {
+	url := fmt.Sprintf("admin/users/%s/enabled", username)
+	headerOpts := requestHeaderOptions{
+		ContentType: mediaTypeApplicationJSON,
+	}
+	reqBody := enableUserRequest{
+		Enabled: false,
+	}
+
+	req, err := s.client.NewRequest(http.MethodPut, url, &headerOpts, reqBody)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+// GrantUserPermission grants a permission a user.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Permissions/operation/addUserPermission
 func (s *SecurityService) GrantUserPermission(ctx context.Context, username string, permission Permission) (*Response, error) {
@@ -505,7 +541,7 @@ func (s *SecurityService) GetUsersAssignedRole(ctx context.Context, rolename str
 		return nil, nil, err
 	}
 
-	var listUsersResponse *getUsersResponse
+	var listUsersResponse getUsersResponse
 	resp, err := s.client.Do(ctx, req, &listUsersResponse)
 	if err != nil {
 		return nil, resp, err
@@ -613,7 +649,7 @@ func (s *SecurityService) GetRolesWithDetails(ctx context.Context) ([]RoleDetail
 	if err != nil {
 		return nil, nil, err
 	}
-	var getRolesWithDetailsResponse *getRolesWithDetailsResponse
+	var getRolesWithDetailsResponse getRolesWithDetailsResponse
 	resp, err := s.client.Do(ctx, req, &getRolesWithDetailsResponse)
 	if err != nil {
 		return nil, resp, err
@@ -651,7 +687,7 @@ func (s *SecurityService) GetRolePermissions(ctx context.Context, rolename strin
 	if err != nil {
 		return nil, nil, err
 	}
-	var rolePermissionsResponse *rolePermissionsResponse
+	var rolePermissionsResponse rolePermissionsResponse
 	resp, err := s.client.Do(ctx, req, &rolePermissionsResponse)
 	if err != nil {
 		return nil, resp, err

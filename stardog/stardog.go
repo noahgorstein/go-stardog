@@ -324,7 +324,7 @@ type ErrorResponse struct {
 }
 
 func (r *ErrorResponse) Error() string {
-	return fmt.Sprintf("[%v] [%v] | [%v] [%v]",
+	return fmt.Sprintf("[%v - %v] | [%v - %v]",
 		r.Response.Request.Method,
 		r.Response.Status, r.Message, r.Code)
 }

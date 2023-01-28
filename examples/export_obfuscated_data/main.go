@@ -4,7 +4,9 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"syscall"
@@ -45,21 +47,9 @@ func main() {
 
 	client, err := stardog.NewClient(endpoint, basicAuthTransport.Client())
 	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error creating client: %v", err)
 	}
-	databases, _, err := client.DatabaseAdmin.GetDatabases(context.Background())
-	if err != nil {
-		fmt.Println("Unable to get databases")
-		if checkStardogError(err) {
-			os.Exit(1)
-		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Database to export default graph of (%v): ", databases)
+	fmt.Print("Database to export default graph of: ")
 	database, _ := r.ReadString('\n')
 	database = strings.TrimSpace(database)
 
@@ -68,7 +58,6 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
 	defer obfuscationConfig.Close()
 
 	opts := &stardog.ExportObfuscatedDataOptions{
@@ -79,28 +68,16 @@ func main() {
 
 	buf, _, err := client.DatabaseAdmin.ExportObfuscatedData(context.Background(), database, opts)
 	if err != nil {
-		fmt.Printf("Unable to export database \"%s\"\n", database)
-		if checkStardogError(err) {
-			os.Exit(1)
+		fmt.Println("unable to export data")
+		var stardogErr *stardog.ErrorResponse
+		if errors.As(err, &stardogErr) {
+			log.Fatalf("stardog error occurred: %v", err)
 		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf("non-stardog error occurred: %v", err)
 	}
 	fmt.Printf("Successfully exported database: \"%s\"\n", database)
 	fmt.Println("-------OBFUSCATED DATA-------")
 	if buf != nil {
 		fmt.Println(buf.String())
 	}
-}
-
-func checkStardogError(err error) bool {
-	stardogErr, ok := err.(*stardog.ErrorResponse)
-	if ok {
-		fmt.Printf("HTTP Status: %v\n", stardogErr.Response.Status)
-		fmt.Printf("Stardog Error Code: %v\n", stardogErr.Code)
-		fmt.Printf("Stardog Error Message: %v\n", stardogErr.Message)
-		return true
-	}
-	return false
 }

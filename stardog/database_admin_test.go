@@ -10,6 +10,16 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func Test_DataModelFormat_Valid(t *testing.T) {
+	f := DataModelFormat(100)
+	if f.Valid() {
+		t.Errorf("should be an invalid DataModelFormat")
+	}
+	if f.String() != DataModelFormatUnknown.String() {
+		t.Errorf("DataModelFormat string value should be an empty string")
+	}
+}
+
 func Test_ExportData_server_side(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
@@ -28,7 +38,7 @@ func Test_ExportData_server_side(t *testing.T) {
 		NamedGraph:  []string{"tag:stardog:api:context:default"},
 		Format:      RDFFormatTurtle,
 		ServerSide:  true,
-		Compression: BZ2,
+		Compression: CompressionBZ2,
 	}
 
 	_, _, err := client.DatabaseAdmin.ExportData(ctx, db, opts)
@@ -226,7 +236,7 @@ func Test_ExportObfuscatedData_server_side(t *testing.T) {
 		NamedGraph:  []string{"tag:stardog:api:context:default"},
 		Format:      RDFFormatTurtle,
 		ServerSide:  true,
-		Compression: BZ2,
+		Compression: CompressionBZ2,
 	}
 
 	_, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, opts)
@@ -316,8 +326,8 @@ func Test_GenerateDataModel(t *testing.T) {
 
 	ctx := context.Background()
 	opts := &GenerateDataModelOptions{
-		Reasoning: true,
-		Output:    "text",
+		Reasoning:    true,
+		OutputFormat: DataModelFormatText,
 	}
 	got, _, err := client.DatabaseAdmin.GenerateDataModel(ctx, db, opts)
 	if err != nil {
@@ -450,6 +460,13 @@ func Test_RestoreDatabase(t *testing.T) {
 	}
 
 	const methodName = "RestoreDatabase"
+	testBadOptions(t, methodName, func() (err error) {
+		opts := &RestoreDatabaseOptions{
+			Name: "restoredDb",
+		}
+		_, err = client.DatabaseAdmin.RestoreDatabase(ctx, "\n", opts)
+		return err
+	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		return client.DatabaseAdmin.RestoreDatabase(nil, pathToBackup, restoreDatabaseOptions)
 	})
@@ -698,8 +715,7 @@ func Test_ImportNamespaces(t *testing.T) {
 
 	rdf, err := os.Open("./test-resources/music_schema.ttl")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		t.Errorf("DatabaseAdmin.ImportNamespaces: unexpected error during test: %v", err)
 	}
 
 	mux.HandleFunc(fmt.Sprintf("/%s/namespaces", db), func(w http.ResponseWriter, r *http.Request) {
@@ -716,6 +732,26 @@ func Test_ImportNamespaces(t *testing.T) {
 	}
 	if want := wantImportNamespacesResponse; !cmp.Equal(got, want) {
 		t.Errorf("DatabaseAdmin.ImportNamespaces = %+v, want %+v", got, want)
+	}
+
+	// close the file to force an error
+	err = rdf.Close()
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces: unexpected error during test: %v", err)
+	}
+	got, _, err = client.DatabaseAdmin.ImportNamespaces(ctx, db, rdf)
+	if err == nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces expected to return an error passing a directory instead of a file")
+	}
+
+	// pass a directory to force an error
+	directory, err := os.Open("./test-resources/")
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces: unexpected error during test: %v", err)
+	}
+	_, _, err = client.DatabaseAdmin.ImportNamespaces(ctx, db, directory)
+	if err == nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces expected to return an error passing a directory instead of a file")
 	}
 
 	const methodName = "ImportNamespaces"
@@ -1065,6 +1101,13 @@ func TestGetDatabaseSize(t *testing.T) {
 	}
 
 	const methodName = "GetDatabaseSize"
+	testBadOptions(t, methodName, func() (err error) {
+		opts := &GetDatabaseSizeOptions{
+			Exact: true,
+		}
+		_, _, err = client.DatabaseAdmin.GetDatabaseSize(ctx, "\n", opts)
+		return err
+	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		got, resp, err := client.DatabaseAdmin.GetDatabaseSize(nil, dbName, getDatabaseSizeOptions)
 		if got != nil {

@@ -156,6 +156,7 @@ func queryResultFormatValues() [11]string {
 		QueryResultFormatTSV:               mediaTypeTextTSV,
 	}
 }
+
 //revive:enable:add-constant
 
 // String will return the string representation of the QueryResultFormat, which is the MIME-type
