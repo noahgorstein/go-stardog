@@ -4,8 +4,10 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/ssh/terminal"
+	"log"
 	"os"
 	"strings"
 	"syscall"
@@ -46,31 +48,21 @@ func main() {
 
 	dbs, _, err := client.DatabaseAdmin.GetDatabases(context.Background())
 	if err != nil {
-		stardogErr, ok := err.(*stardog.ErrorResponse)
-		if ok {
-			fmt.Printf("HTTP Status: %v\n", stardogErr.Response.Status)
-			fmt.Printf("Stardog Error Code: %v\n", stardogErr.Code)
-			fmt.Printf("Stardog Error Message: %v\n", stardogErr.Message)
-			os.Exit(1)
+		var stardogErr *stardog.ErrorResponse
+		if errors.As(err, &stardogErr) {
+			log.Fatalf("stardog error occurred: %v", err)
 		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf("non-stardog error occurred: %v", err)
 	}
 
 	for _, db := range dbs {
 		size, _, err := client.DatabaseAdmin.GetDatabaseSize(context.Background(), db, &stardog.GetDatabaseSizeOptions{Exact: true})
 		if err != nil {
-			stardogErr, ok := err.(*stardog.ErrorResponse)
-			if ok {
-				fmt.Printf("HTTP Status: %v\n", stardogErr.Response.Status)
-				fmt.Printf("Stardog Error Code: %v\n", stardogErr.Code)
-				fmt.Printf("Stardog Error Message: %v\n", stardogErr.Message)
-				os.Exit(1)
+			var stardogErr *stardog.ErrorResponse
+			if errors.As(err, &stardogErr) {
+				log.Fatalf("stardog error occurred: %v", err)
 			}
-			// some other error took place
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatalf("non-stardog error occurred: %v", err)
 		}
 		fmt.Printf("Database: %s ---- Size: %d\n", db, *size)
 	}

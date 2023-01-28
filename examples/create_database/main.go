@@ -4,7 +4,9 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"syscall"
@@ -78,27 +80,14 @@ func main() {
 	}
 
 	msg, _, err := client.DatabaseAdmin.CreateDatabase(context.Background(), "go-stardog-test-db", opts)
-
 	if err != nil {
-		fmt.Println("Unable to create database")
-		if checkStardogError(err) {
-			os.Exit(1)
+		var stardogErr *stardog.ErrorResponse
+		if errors.As(err, &stardogErr) {
+			log.Fatalf("stardog error occurred: %v", err)
 		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal("non-stardog error occurred")
 	}
+	// success !
 	fmt.Println(*msg)
 
-}
-
-func checkStardogError(err error) bool {
-	stardogErr, ok := err.(*stardog.ErrorResponse)
-	if ok {
-		fmt.Printf("HTTP Status: %v\n", stardogErr.Response.Status)
-		fmt.Printf("Stardog Error Code: %v\n", stardogErr.Code)
-		fmt.Printf("Stardog Error Message: %v\n", stardogErr.Message)
-		return true
-	}
-	return false
 }
