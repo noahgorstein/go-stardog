@@ -4,7 +4,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/noahgorstein/go-stardog.svg)](https://pkg.go.dev/github.com/noahgorstein/go-stardog) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/noahgorstein/go-stardog)](https://goreportcard.com/report/github.com/noahgorstein/go-stardog)
-![Coverage](https://img.shields.io/badge/Coverage-96.2%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-96.6%25-brightgreen)
 
 
 go-stardog is a Go client library for interacting with a Stardog server.
