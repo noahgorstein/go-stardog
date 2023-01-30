@@ -1,6 +1,6 @@
 package stardog
 
-// Data compression formats available in Stardog
+// Data compression formats available in Stardog.
 // The zero-value for Compression is CompressionUnknown
 type Compression int
 

@@ -265,8 +265,6 @@ func TestSparqlService_Ask(t *testing.T) {
 		testHeader(t, r, "Accept", mediaTypeBoolean)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("true"))
-
-		t.Log(r.RequestURI)
 	})
 
 	ctx := context.Background()

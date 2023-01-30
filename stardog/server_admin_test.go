@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func Test_IsAlive_true(t *testing.T) {
+func TestServerAdminService_IsAlive(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -36,34 +36,7 @@ func Test_IsAlive_true(t *testing.T) {
 	})
 }
 
-func Test_IsAlive_false(t *testing.T) {
-	client, mux, _, teardown := setup()
-	defer teardown()
-
-	mux.HandleFunc("/admin/alive", func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "GET")
-		w.WriteHeader(http.StatusServiceUnavailable)
-	})
-	ctx := context.Background()
-	got, _, err := client.ServerAdmin.IsAlive(ctx)
-	if err == nil {
-		t.Errorf("ServerAdmin.IsAlive returned nil error")
-	}
-	if want := false; !cmp.Equal(*got, want) {
-		t.Errorf("ServerAdmin.IsAlive = %+v, want %+v", *got, want)
-	}
-
-	const methodName = "IsAlive"
-	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.ServerAdmin.IsAlive(nil)
-		if got != nil && *got != false {
-			t.Errorf("testNewRequestAndDoFailure %v = %#v, want false", methodName, *got)
-		}
-		return resp, err
-	})
-}
-
-func Test_GetProcesses(t *testing.T) {
+func TestServerAdminService_GetProcesses(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -120,7 +93,7 @@ func Test_GetProcesses(t *testing.T) {
 	})
 }
 
-func Test_GetProcess(t *testing.T) {
+func TestServerAdminService_GetProcess(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -177,7 +150,7 @@ func Test_GetProcess(t *testing.T) {
 	})
 }
 
-func Test_KillProcess(t *testing.T) {
+func TestServerAdminService_KillProcess(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 

@@ -55,7 +55,7 @@ func TestPermissionResourceType_UnmarshalText(t *testing.T) {
 	}
 }
 
-func Test_GetUsers(t *testing.T) {
+func TestSecurityService_GetUsers(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -90,7 +90,7 @@ func Test_GetUsers(t *testing.T) {
 	})
 }
 
-func Test_GetUsersWithDetails(t *testing.T) {
+func TestSecurityService_GetUsersWithDetails(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -177,7 +177,7 @@ func Test_GetUsersWithDetails(t *testing.T) {
 	})
 }
 
-func Test_GetUserPermissions(t *testing.T) {
+func TestSecurityService_GetUserPermissions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -219,7 +219,7 @@ func Test_GetUserPermissions(t *testing.T) {
 	})
 }
 
-func Test_GetUserEffectivePermissions(t *testing.T) {
+func TestSecurityService_GetUserEffectivePermissions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -264,7 +264,7 @@ func Test_GetUserEffectivePermissions(t *testing.T) {
 	})
 }
 
-func Test_GetUserDetails(t *testing.T) {
+func TestSecurityService_GetUserDetails(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -357,7 +357,7 @@ func Test_GetUserDetails(t *testing.T) {
 	})
 }
 
-func Test_IsSuperuser(t *testing.T) {
+func TestSecurityService_IsSuperuser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -390,7 +390,7 @@ func Test_IsSuperuser(t *testing.T) {
 	})
 }
 
-func Test_IsEnabled(t *testing.T) {
+func TestSecurityService_IsEnabled(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -423,7 +423,7 @@ func Test_IsEnabled(t *testing.T) {
 	})
 }
 
-func Test_CreateUser(t *testing.T) {
+func TestSecurityService_CreateUser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -456,7 +456,7 @@ func Test_CreateUser(t *testing.T) {
 	})
 }
 
-func Test_DeleteUser(t *testing.T) {
+func TestSecurityService_DeleteUser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -478,7 +478,7 @@ func Test_DeleteUser(t *testing.T) {
 	})
 }
 
-func Test_ChangeUserPassword(t *testing.T) {
+func TestSecurityService_ChangeUserPassword(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -510,7 +510,7 @@ func Test_ChangeUserPassword(t *testing.T) {
 	})
 }
 
-func Test_EnableUser(t *testing.T) {
+func TestSecurityService_EnableUser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -542,7 +542,7 @@ func Test_EnableUser(t *testing.T) {
 	})
 }
 
-func Test_DisableUser(t *testing.T) {
+func TestSecurityService_DisableUser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -574,7 +574,7 @@ func Test_DisableUser(t *testing.T) {
 	})
 }
 
-func Test_GetRoles(t *testing.T) {
+func TestSecurityService_GetRoles(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -609,7 +609,7 @@ func Test_GetRoles(t *testing.T) {
 	})
 }
 
-func Test_GetRolesWithDetails(t *testing.T) {
+func TestSecurityService_GetRolesWithDetails(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -694,7 +694,7 @@ func Test_GetRolesWithDetails(t *testing.T) {
 	})
 }
 
-func Test_GetRolesAssignedToUser(t *testing.T) {
+func TestSecurityService_GetRolesAssignedToUser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -730,7 +730,7 @@ func Test_GetRolesAssignedToUser(t *testing.T) {
 	})
 }
 
-func Test_CreateRole(t *testing.T) {
+func TestSecurityService_CreateRole(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -761,7 +761,7 @@ func Test_CreateRole(t *testing.T) {
 	})
 }
 
-func Test_GetRolePermissions(t *testing.T) {
+func TestSecurityService_GetRolePermissions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -805,7 +805,7 @@ func Test_GetRolePermissions(t *testing.T) {
 	})
 }
 
-func Test_GrantRolePermission(t *testing.T) {
+func TestSecurityService_GrantRolePermission(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -842,7 +842,7 @@ func Test_GrantRolePermission(t *testing.T) {
 	})
 }
 
-func Test_RevokeRolePermission(t *testing.T) {
+func TestSecurityService_RevokeRolePermission(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -878,7 +878,7 @@ func Test_RevokeRolePermission(t *testing.T) {
 	})
 }
 
-func Test_DeleteRole(t *testing.T) {
+func TestSecurityService_DeleteRole(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -907,7 +907,7 @@ func Test_DeleteRole(t *testing.T) {
 	})
 }
 
-func Test_GetUsersAssignedRole(t *testing.T) {
+func TestSecurityService_GetUsersAssignedRole(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -943,7 +943,7 @@ func Test_GetUsersAssignedRole(t *testing.T) {
 	})
 }
 
-func Test_GrantUserPermission(t *testing.T) {
+func TestSecurityService_GrantUserPermission(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -980,7 +980,7 @@ func Test_GrantUserPermission(t *testing.T) {
 	})
 }
 
-func Test_RevokeUserPermission(t *testing.T) {
+func TestSecurityService_RevokeUserPermission(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -1017,7 +1017,7 @@ func Test_RevokeUserPermission(t *testing.T) {
 	})
 }
 
-func Test_AssignRole(t *testing.T) {
+func TestSecurityService_AssignRole(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -1050,7 +1050,7 @@ func Test_AssignRole(t *testing.T) {
 	})
 }
 
-func Test_OverwriteRoles(t *testing.T) {
+func TestSecurityService_OverwriteRoles(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -1083,7 +1083,7 @@ func Test_OverwriteRoles(t *testing.T) {
 	})
 }
 
-func Test_UnassignRole(t *testing.T) {
+func TestSecurityService_UnassignRole(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 

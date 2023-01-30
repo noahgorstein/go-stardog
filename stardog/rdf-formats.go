@@ -1,6 +1,7 @@
 package stardog
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -43,12 +44,35 @@ func rdfFormatValues() [7]string {
 
 //revive:enable:add-constant
 
-// String will return the string representation of the RDFFormat, which is the MIME-type
+// String will return the string representation of the RDFFormat, which is the [MIME-type]
+//
+// [MIME-type]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 func (r RDFFormat) String() string {
 	if !r.Valid() {
 		return rdfFormatValues()[RDFFormatUnknown]
 	}
 	return rdfFormatValues()[r]
+}
+
+// helper function to get a string representation of the RDFFormat that [DatabaseAdminService.ExportData]
+// and [DatabaseAdminService.ExportObfuscatedData] need to satisfy the Stardog API.
+func (r RDFFormat) toExportFormat() (string, error) {
+	switch r {
+	case RDFFormatTrig:
+		return "trig", nil
+	case RDFFormatTurtle:
+		return "turtle", nil
+	case RDFFormatJSONLD:
+		return "jsonld", nil
+	case RDFFormatNQuads:
+		return "nquads", nil
+	case RDFFormatNTriples:
+		return "ntriples", nil
+	case RDFFormatRDFXML:
+		return "rdfxml", nil
+	default:
+		return "", errors.New("supported RDF formats for export are Trig, Turtle, JSONLD, NQUADS, NTRIPLES, and RDFXML")
+	}
 }
 
 // GetRDFFormatFromExtension attempts to determine the RDFFormat from a given filepath.

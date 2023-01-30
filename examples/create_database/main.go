@@ -47,8 +47,7 @@ func main() {
 
 	client, err := stardog.NewClient(endpoint, basicAuthTransport.Client())
 	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("error creating stardog client: %v", err)
 	}
 
 	datasets := []stardog.Dataset{
@@ -79,7 +78,7 @@ func main() {
 		CopyToServer:    true,
 	}
 
-	msg, _, err := client.DatabaseAdmin.CreateDatabase(context.Background(), "go-stardog-test-db", opts)
+	creationStatus, _, err := client.DatabaseAdmin.CreateDatabase(context.Background(), "go-stardog-db", opts)
 	if err != nil {
 		var stardogErr *stardog.ErrorResponse
 		if errors.As(err, &stardogErr) {
@@ -88,6 +87,6 @@ func main() {
 		log.Fatal("non-stardog error occurred")
 	}
 	// success !
-	fmt.Println(*msg)
+	fmt.Println(*creationStatus)
 
 }

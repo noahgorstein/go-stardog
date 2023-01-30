@@ -138,7 +138,7 @@ type Dataset struct {
 // ExportDataOptions specifies the optional parameters to the [DatabaseAdminService.ExportData] method.
 type ExportDataOptions struct {
 	// The named graph(s) to export from the dataset
-	NamedGraph []string `url:"named-graph-uri"`
+	NamedGraph []string `url:"named-graph-uri,omitempty"`
 
 	// The RDF format for the exported data
 	Format RDFFormat `url:"-"`
@@ -154,7 +154,7 @@ type ExportDataOptions struct {
 // the [DatabaseAdminService.ExportObfuscatedData] method.
 type ExportObfuscatedDataOptions struct {
 	// The named graph(s) to export from the dataset
-	NamedGraph []string `url:"named-graph-uri"`
+	NamedGraph []string `url:"named-graph-uri,omitempty"`
 
 	// The RDF format for the exported data
 	Format RDFFormat `url:"-"`
@@ -167,7 +167,7 @@ type ExportObfuscatedDataOptions struct {
 
 	// Configuration file for obfuscation.
 	// See https://github.com/stardog-union/stardog-examples/blob/master/config/obfuscation.ttl for an example configuration file.
-	ObfuscationConfig *os.File
+	ObfuscationConfig *os.File `url:"-"`
 }
 
 type createDatabaseRequest struct {
@@ -470,22 +470,23 @@ func newCreateDatabaseRequestBody(name string, opts *CreateDatabaseOptions) (*by
 
 	req := createDatabaseRequest{
 		Name: name,
+		// initialize Files and Options to make sure [], {} respectively instead of null
+		// is in the JSON request sent to Stardog if no Files or Options
+		Files:   make([]createDatabaseRequestFile, 0),
+		Options: make(map[string]interface{}),
 	}
 
 	if opts != nil {
 		if opts.Datasets != nil {
-			var files = make([]createDatabaseRequestFile, len(opts.Datasets))
+			req.Files = make([]createDatabaseRequestFile, len(opts.Datasets))
 			for i, dataset := range opts.Datasets {
-				files[i] = createDatabaseRequestFile{
+				req.Files[i] = createDatabaseRequestFile{
 					Filename: dataset.Path,
 					Context:  dataset.NamedGraph,
 				}
 			}
-			req.Files = files
 		}
-		if opts.DatabaseOptions == nil {
-			req.Options = make(map[string]interface{})
-		} else {
+		if opts.DatabaseOptions != nil {
 			req.Options = opts.DatabaseOptions
 		}
 		req.CopyToServer = opts.CopyToServer
@@ -665,25 +666,6 @@ func (s *DatabaseAdminService) GenerateDataModel(ctx context.Context, database s
 	return &writer, resp, err
 }
 
-func getExportFormatFromRDFFormat(format RDFFormat) (string, error) {
-	switch format {
-	case RDFFormatTrig:
-		return "trig", nil
-	case RDFFormatTurtle:
-		return "turtle", nil
-	case RDFFormatJSONLD:
-		return "jsonld", nil
-	case RDFFormatNQuads:
-		return "nquads", nil
-	case RDFFormatNTriples:
-		return "ntriples", nil
-	case RDFFormatRDFXML:
-		return "rdfxml", nil
-	default:
-		return "", errors.New("supported RDF formats for export are Trig, Turtle, JSONLD, NQUADS, NTRIPLES, and RDFXML")
-	}
-}
-
 // ExportData exports RDF data from the database.
 // If ExportDataOptions.ServerSide=true, the RDF using the specified format will be saved in the export directory
 // for the server. The default server export directory is ‘.exports’ in the $STARDOG_HOME
@@ -703,14 +685,16 @@ func (s *DatabaseAdminService) ExportData(ctx context.Context, database string, 
 			if !opts.ServerSide {
 				requestHeaderOptions.Accept = opts.Format.String()
 			} else {
-				// if server side export, Stardog will return some details about the successful import in plain text
-				// i.e. Exported 28 statements from db1 to /stardog-home/.exports/db1-2023-01-15.trig in 2.551 ms
-				requestHeaderOptions.Accept = mediaTypePlainText
-				format, err := getExportFormatFromRDFFormat(opts.Format)
+				format, err := opts.Format.toExportFormat()
+				// this is very unlikely to happen because a check to see if format is valid is done earlier
 				if err != nil {
 					return nil, nil, err
 				}
 				u += fmt.Sprintf("?format=%s", format)
+
+				// if server side export, Stardog will return some details about the successful import in plain text
+				// i.e. Exported 28 statements from db1 to /stardog-home/.exports/db1-2023-01-15.trig in 2.551 ms
+				requestHeaderOptions.Accept = mediaTypePlainText
 			}
 		}
 	}
@@ -775,6 +759,7 @@ func (s *DatabaseAdminService) ExportObfuscatedData(ctx context.Context, databas
 		if err != nil {
 			return nil, nil, err
 		}
+
 		requestBody = bytes.NewBuffer(requestBytes)
 		requestHeaderOptions.ContentType = RDFFormatTurtle.String()
 	} else {
@@ -788,10 +773,12 @@ func (s *DatabaseAdminService) ExportObfuscatedData(ctx context.Context, databas
 				requestHeaderOptions.Accept = opts.Format.String()
 			} else {
 				requestHeaderOptions.Accept = mediaTypePlainText
-				format, err := getExportFormatFromRDFFormat(opts.Format)
+				format, err := opts.Format.toExportFormat()
+				// this is unlikely to occur, since we check if RDFFormat is Valid
 				if err != nil {
 					return nil, nil, err
 				}
+				// if obfuscation configuration was NOT provided
 				if strings.Contains(u, "?obf=DEFAULT") {
 					u += "&"
 				} else {
