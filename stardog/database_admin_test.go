@@ -268,7 +268,6 @@ func TestDatabaseAdminService_ExportObfuscatedData_serverSide(t *testing.T) {
 	const methodName = "ExportObfuscatedData"
 	testBadOptions(t, methodName, func() (err error) {
 		_, _, err = client.DatabaseAdmin.ExportObfuscatedData(ctx, "\n", opts)
-		fmt.Println(err)
 		return err
 	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
