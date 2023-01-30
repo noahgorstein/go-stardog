@@ -5,12 +5,23 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
 
-func Test_ExportData_server_side(t *testing.T) {
+func TestDatabaseAdminService_DataModelFormat_Valid(t *testing.T) {
+	f := DataModelFormat(100)
+	if f.Valid() {
+		t.Errorf("should be an invalid DataModelFormat")
+	}
+	if f.String() != DataModelFormatUnknown.String() {
+		t.Errorf("DataModelFormat string value should be an empty string")
+	}
+}
+
+func TestDatabaseAdminService_ExportData_serverSide(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -28,7 +39,7 @@ func Test_ExportData_server_side(t *testing.T) {
 		NamedGraph:  []string{"tag:stardog:api:context:default"},
 		Format:      RDFFormatTurtle,
 		ServerSide:  true,
-		Compression: BZ2,
+		Compression: CompressionBZ2,
 	}
 
 	_, _, err := client.DatabaseAdmin.ExportData(ctx, db, opts)
@@ -37,6 +48,10 @@ func Test_ExportData_server_side(t *testing.T) {
 	}
 
 	const methodName = "ExportData"
+	testBadOptions(t, methodName, func() (err error) {
+		_, _, err = client.DatabaseAdmin.ExportData(ctx, "\n", opts)
+		return err
+	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		got, resp, err := client.DatabaseAdmin.ExportData(nil, db, opts)
 		if got != nil {
@@ -46,7 +61,7 @@ func Test_ExportData_server_side(t *testing.T) {
 	})
 }
 
-func Test_ExportData_client_side(t *testing.T) {
+func TestDatabaseAdminService_ExportData_clientSide(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -94,7 +109,7 @@ func Test_ExportData_client_side(t *testing.T) {
 	})
 }
 
-func Test_ExportObfuscatedData_client_side(t *testing.T) {
+func TestDatabaseAdminService_ExportObfuscatedData_client_side(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -148,7 +163,7 @@ func Test_ExportObfuscatedData_client_side(t *testing.T) {
 	})
 }
 
-func Test_ExportObfuscatedData_client_side_custom_obf_config(t *testing.T) {
+func TestDatabaseAdminService_ExportObfuscatedData_clientSideCustomObfConfig(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -206,9 +221,25 @@ func Test_ExportObfuscatedData_client_side_custom_obf_config(t *testing.T) {
 		}
 		return resp, err
 	})
+
+	// close the obfuscation to force an error
+	config.Close()
+	_, _, err = client.DatabaseAdmin.ExportObfuscatedData(ctx, db, opts)
+	if err == nil {
+		t.Errorf("DatabaseAdmin.ExportObfuscatedData didn't return an error about passing a closed configuration file")
+	}
+
+	opts.ObfuscationConfig, err = os.Open("./test-resources")
+	if err != nil {
+		t.Errorf("unexpected error opening a directory")
+	}
+	_, _, err = client.DatabaseAdmin.ExportObfuscatedData(ctx, db, opts)
+	if err == nil {
+		t.Errorf("DatabaseAdmin.ExportObfuscatedData didn't return an error about passing a directory instead of a file")
+	}
 }
 
-func Test_ExportObfuscatedData_server_side(t *testing.T) {
+func TestDatabaseAdminService_ExportObfuscatedData_serverSide(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -226,7 +257,7 @@ func Test_ExportObfuscatedData_server_side(t *testing.T) {
 		NamedGraph:  []string{"tag:stardog:api:context:default"},
 		Format:      RDFFormatTurtle,
 		ServerSide:  true,
-		Compression: BZ2,
+		Compression: CompressionBZ2,
 	}
 
 	_, _, err := client.DatabaseAdmin.ExportObfuscatedData(ctx, db, opts)
@@ -235,6 +266,10 @@ func Test_ExportObfuscatedData_server_side(t *testing.T) {
 	}
 
 	const methodName = "ExportObfuscatedData"
+	testBadOptions(t, methodName, func() (err error) {
+		_, _, err = client.DatabaseAdmin.ExportObfuscatedData(ctx, "\n", opts)
+		return err
+	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		got, resp, err := client.DatabaseAdmin.ExportObfuscatedData(nil, db, opts)
 		if got != nil {
@@ -244,7 +279,43 @@ func Test_ExportObfuscatedData_server_side(t *testing.T) {
 	})
 }
 
-func Test_OnlineDatabase(t *testing.T) {
+func TestDatabaseAdminService_ExportObfuscatedData_serverSideConfig(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	db := "db1"
+
+	mux.HandleFunc(fmt.Sprintf("/%s/export", db), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "POST")
+		testHeader(t, r, "Accept", mediaTypePlainText)
+
+		if strings.Contains(r.RequestURI, "?obf=DEFAULT") {
+			t.Errorf("request URI should not contain ?obf=DEFAULT if configuration file provided")
+		}
+
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ctx := context.Background()
+
+	config, err := os.Open("./test-resources/obfuscation-config.ttl")
+	if err != nil {
+		t.Errorf("error opening the obfuscation configuration file")
+	}
+	defer config.Close()
+
+	opts := &ExportObfuscatedDataOptions{
+		Format:            RDFFormatTrig,
+		ServerSide:        true,
+		ObfuscationConfig: config,
+	}
+	_, _, err = client.DatabaseAdmin.ExportObfuscatedData(ctx, db, opts)
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ExportObfuscatedData returned error: %v", err)
+	}
+}
+
+func TestDatabaseAdminService_OnlineDatabase(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -268,7 +339,7 @@ func Test_OnlineDatabase(t *testing.T) {
 	})
 }
 
-func Test_OfflineDatabase(t *testing.T) {
+func TestDatabaseAdminService_OfflineDatabase(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -292,7 +363,7 @@ func Test_OfflineDatabase(t *testing.T) {
 	})
 }
 
-func Test_GenerateDataModel(t *testing.T) {
+func TestDatabaseAdminService_GenerateDataModel(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -316,8 +387,8 @@ func Test_GenerateDataModel(t *testing.T) {
 
 	ctx := context.Background()
 	opts := &GenerateDataModelOptions{
-		Reasoning: true,
-		Output:    "text",
+		Reasoning:    true,
+		OutputFormat: DataModelFormatText,
 	}
 	got, _, err := client.DatabaseAdmin.GenerateDataModel(ctx, db, opts)
 	if err != nil {
@@ -328,6 +399,11 @@ func Test_GenerateDataModel(t *testing.T) {
 	}
 
 	const methodName = "GenerateDataModel"
+	testBadOptions(t, methodName, func() (err error) {
+		opts := &GenerateDataModelOptions{}
+		_, _, err = client.DatabaseAdmin.GenerateDataModel(ctx, "\n", opts)
+		return err
+	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		got, resp, err := client.DatabaseAdmin.GenerateDataModel(nil, db, opts)
 		if got != nil {
@@ -337,7 +413,7 @@ func Test_GenerateDataModel(t *testing.T) {
 	})
 }
 
-func Test_CreateDatabase(t *testing.T) {
+func TestDatabaseAdminService_CreateDatabase(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -427,7 +503,7 @@ func Test_CreateDatabase(t *testing.T) {
 
 }
 
-func Test_RestoreDatabase(t *testing.T) {
+func TestDatabaseAdminService_RestoreDatabase(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -450,12 +526,19 @@ func Test_RestoreDatabase(t *testing.T) {
 	}
 
 	const methodName = "RestoreDatabase"
+	testBadOptions(t, methodName, func() (err error) {
+		opts := &RestoreDatabaseOptions{
+			Name: "restoredDb",
+		}
+		_, err = client.DatabaseAdmin.RestoreDatabase(ctx, "\n", opts)
+		return err
+	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		return client.DatabaseAdmin.RestoreDatabase(nil, pathToBackup, restoreDatabaseOptions)
 	})
 }
 
-func Test_RepairDatabase(t *testing.T) {
+func TestDatabaseAdminService_RepairDatabase(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -479,7 +562,7 @@ func Test_RepairDatabase(t *testing.T) {
 	})
 }
 
-func Test_OptimizeDatabase(t *testing.T) {
+func TestDatabaseAdminService_OptimizeDatabase(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -503,7 +586,7 @@ func Test_OptimizeDatabase(t *testing.T) {
 	})
 }
 
-func Test_DropDatabase(t *testing.T) {
+func TestDatabaseAdminService_DropDatabase(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -527,7 +610,7 @@ func Test_DropDatabase(t *testing.T) {
 	})
 }
 
-func Test_GetAllDatabaseOptionsDetails(t *testing.T) {
+func TestDatabaseAdminService_GetAllDatabaseOptionsDetails(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -608,7 +691,7 @@ func Test_GetAllDatabaseOptionsDetails(t *testing.T) {
 	})
 }
 
-func Test_GetNamespaces(t *testing.T) {
+func TestDatabaseAdminService_GetNamespaces(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -671,7 +754,7 @@ func Test_GetNamespaces(t *testing.T) {
 	})
 }
 
-func Test_ImportNamespaces(t *testing.T) {
+func TestDatabaseAdminService_ImportNamespaces(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -698,9 +781,9 @@ func Test_ImportNamespaces(t *testing.T) {
 
 	rdf, err := os.Open("./test-resources/music_schema.ttl")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		t.Errorf("DatabaseAdmin.ImportNamespaces: unexpected error during test: %v", err)
 	}
+	defer rdf.Close()
 
 	mux.HandleFunc(fmt.Sprintf("/%s/namespaces", db), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "POST")
@@ -718,6 +801,30 @@ func Test_ImportNamespaces(t *testing.T) {
 		t.Errorf("DatabaseAdmin.ImportNamespaces = %+v, want %+v", got, want)
 	}
 
+	// pass a directory to force an error
+	directory, err := os.Open("./test-resources/")
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces: unexpected error during test: %v", err)
+	}
+	_, _, err = client.DatabaseAdmin.ImportNamespaces(ctx, db, directory)
+	if err == nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces expected to return an error passing a directory instead of a file")
+	}
+
+	// pass a file with an non rdf file extension
+	tempFile, err := os.CreateTemp(".", "import-namespaces-test")
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces: unexpected error creating a temp file: %v", err)
+	}
+	_, _, err = client.DatabaseAdmin.ImportNamespaces(ctx, db, tempFile)
+	if err == nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces expected to return an error passing a file without a non-RDF file extension")
+	}
+	err = os.Remove(tempFile.Name())
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces: unexpected error deleting a temp file: %v", err)
+	}
+
 	const methodName = "ImportNamespaces"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		got, resp, err := client.DatabaseAdmin.ImportNamespaces(nil, db, rdf)
@@ -726,9 +833,19 @@ func Test_ImportNamespaces(t *testing.T) {
 		}
 		return resp, err
 	})
+
+	// close the file to force an error
+	err = rdf.Close()
+	if err != nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces: unexpected error during test: %v", err)
+	}
+	got, _, err = client.DatabaseAdmin.ImportNamespaces(ctx, db, rdf)
+	if err == nil {
+		t.Errorf("DatabaseAdmin.ImportNamespaces expected to return an error passing a directory instead of a file")
+	}
 }
 
-func Test_GetDatabaseOptions(t *testing.T) {
+func TestDatabaseAdminService_GetDatabaseOptions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -764,7 +881,7 @@ func Test_GetDatabaseOptions(t *testing.T) {
 	})
 }
 
-func Test_SetDatabaseOptions(t *testing.T) {
+func TestDatabaseAdminService_SetDatabaseOptions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -789,7 +906,7 @@ func Test_SetDatabaseOptions(t *testing.T) {
 	})
 }
 
-func Test_GetDatabases(t *testing.T) {
+func TestDatabaseAdminService_GetDatabases(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -822,7 +939,7 @@ func Test_GetDatabases(t *testing.T) {
 	})
 }
 
-func Test_GetAllDatabaseOptions(t *testing.T) {
+func TestDatabaseAdminService_GetAllDatabaseOptions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -926,7 +1043,7 @@ func Test_GetAllDatabaseOptions(t *testing.T) {
 	})
 }
 
-func Test_GetDatabasesWithOptions(t *testing.T) {
+func TestDatabaseAdminService_GetDatabasesWithOptions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -1021,7 +1138,6 @@ func Test_GetDatabasesWithOptions(t *testing.T) {
 	if err != nil {
 		t.Errorf("DatabaseAdmin.GetAllDatabasesWithOptions returned error: %v", err)
 	}
-	t.Log(len(got))
 	if want := wantDatabasesWithOptions; !cmp.Equal(len(got), len(want)) {
 		t.Errorf("DatabaseAdmin.GetAllDatabasesWithOptions returned slice has length %+v, want %+v", got, want)
 	}
@@ -1036,7 +1152,7 @@ func Test_GetDatabasesWithOptions(t *testing.T) {
 	})
 }
 
-func TestGetDatabaseSize(t *testing.T) {
+func TestDatabaseAdminService_GetDatabaseSize(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -1065,6 +1181,13 @@ func TestGetDatabaseSize(t *testing.T) {
 	}
 
 	const methodName = "GetDatabaseSize"
+	testBadOptions(t, methodName, func() (err error) {
+		opts := &GetDatabaseSizeOptions{
+			Exact: true,
+		}
+		_, _, err = client.DatabaseAdmin.GetDatabaseSize(ctx, "\n", opts)
+		return err
+	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		got, resp, err := client.DatabaseAdmin.GetDatabaseSize(nil, dbName, getDatabaseSizeOptions)
 		if got != nil {
@@ -1072,4 +1195,26 @@ func TestGetDatabaseSize(t *testing.T) {
 		}
 		return resp, err
 	})
+}
+
+func TestDatabaseAdminService_GetDatabaseSize_nonIntegerResponse(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	dbName := "db1"
+
+	responseString := "not an integer"
+
+	mux.HandleFunc(fmt.Sprintf("/%s/size", dbName), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", mediaTypePlainText)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(responseString))
+	})
+
+	ctx := context.Background()
+	_, _, err := client.DatabaseAdmin.GetDatabaseSize(ctx, dbName, nil)
+	if err == nil {
+		t.Fatalf("DatabaseAdmin.GetDatabaseSize should return an error if response cannot be converted to an integer")
+	}
 }

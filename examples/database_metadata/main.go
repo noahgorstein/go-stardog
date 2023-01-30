@@ -4,7 +4,9 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"syscall"
@@ -45,31 +47,21 @@ func main() {
 
 	client, err := stardog.NewClient(endpoint, basicAuthTransport.Client())
 	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
-	}
-	databases, _, err := client.DatabaseAdmin.GetDatabases(context.Background())
-	if err != nil {
-		fmt.Println("Unable to get databases")
-		if checkStardogError(err) {
-			os.Exit(1)
-		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf("unable to create stardog client: %v", err)
 	}
 
-	fmt.Printf("Database to set 'search.enabled=true' for (%v): ", databases)
+	fmt.Print("Database to set 'search.enabled=true' for: ")
 	database, _ := r.ReadString('\n')
 	database = strings.TrimSpace(database)
 
-	fmt.Printf("Offlining the database %s\n", database)
+	fmt.Println("Offlining the database...")
 	_, err = client.DatabaseAdmin.OfflineDatabase(context.Background(), database)
 	if err != nil {
-		fmt.Printf("Unable to offline database \"%s\"\n", database)
-		if !checkStardogError(err) {
-			fmt.Println(err)
+		var stardogErr *stardog.ErrorResponse
+		if errors.As(err, &stardogErr) {
+			log.Fatalf("stardog error occurred: %v", err)
 		}
+		log.Fatalf("non-stardog error occurred: %v", err)
 	}
 	fmt.Println("Database offlined successfully.")
 
@@ -79,52 +71,38 @@ func main() {
 	}
 	_, err = client.DatabaseAdmin.SetDatabaseOptions(context.Background(), database, setOptions)
 	if err != nil {
-		fmt.Printf("Unable to set 'search.enabled' for database \"%s\"\n", database)
-		if checkStardogError(err) {
-			os.Exit(1)
+		var stardogErr *stardog.ErrorResponse
+		if errors.As(err, &stardogErr) {
+			log.Fatalf("stardog error occurred: %v", err)
 		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf("non-stardog error occurred: %v", err)
 	}
 
 	configOptions := []string{"search.enabled"}
 	opts, _, err := client.DatabaseAdmin.GetDatabaseOptions(context.Background(), database, configOptions)
 	if err != nil {
-		fmt.Printf("Unable to get value set for 'search.enabled' for database \"%s\"\n", database)
-		if checkStardogError(err) {
-			os.Exit(1)
+		var stardogErr *stardog.ErrorResponse
+		if errors.As(err, &stardogErr) {
+			log.Fatalf("stardog error occurred: %v", err)
 		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf("non-stardog error occurred: %v", err)
 	}
-	fmt.Println("-----OPTIONS----")
+
+	fmt.Println("-----DATABASE OPTIONS----")
 	for key, value := range opts {
 		fmt.Printf("OPTION: %s | VALUE: %v\n", key, value)
 	}
 	fmt.Println("----------------")
 
-	fmt.Printf("Onlining the database %s\n", database)
+	fmt.Printf("Onlining the database %s...\n", database)
 	_, err = client.DatabaseAdmin.OnlineDatabase(context.Background(), database)
 	if err != nil {
 		fmt.Printf("Unable to online database \"%s\"\n", database)
-		if !checkStardogError(err) {
-			// some other error took place
-			fmt.Println(err)
-			os.Exit(1)
+		var stardogErr *stardog.ErrorResponse
+		if errors.As(err, &stardogErr) {
+			log.Fatalf("stardog error occurred: %v", err)
 		}
+		log.Fatalf("non-stardog error occurred: %v", err)
 	}
 	fmt.Println("Database onlined successfully.")
-}
-
-func checkStardogError(err error) bool {
-	stardogErr, ok := err.(*stardog.ErrorResponse)
-	if ok {
-		fmt.Printf("HTTP Status: %v\n", stardogErr.Response.Status)
-		fmt.Printf("Stardog Error Code: %v\n", stardogErr.Code)
-		fmt.Printf("Stardog Error Message: %v\n", stardogErr.Message)
-		return true
-	}
-	return false
 }

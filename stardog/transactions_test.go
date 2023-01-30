@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func Test_Begin(t *testing.T) {
+func TestTransactionService_Begin(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
