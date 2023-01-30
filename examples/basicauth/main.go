@@ -4,7 +4,9 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"syscall"
@@ -35,21 +37,15 @@ func main() {
 
 	client, err := stardog.NewClient(endpoint, basicAuthTransport.Client())
 	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("unable to create Stardog client: %v", err)
 	}
 	isAlive, _, err := client.ServerAdmin.IsAlive(context.Background())
 	if err != nil {
-		stardogErr, ok := err.(*stardog.ErrorResponse)
-		if ok {
-			fmt.Printf("HTTP Status: %v\n", stardogErr.Response.Status)
-			fmt.Printf("Stardog Error Code: %v\n", stardogErr.Code)
-			fmt.Printf("Stardog Error Message: %v\n", stardogErr.Message)
-			os.Exit(1)
+		var stardogErr *stardog.ErrorResponse
+		if errors.As(err, &stardogErr) {
+			log.Fatalf("stardog error occurred: %v", err)
 		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf("non-stardog error occurred: %v", err)
 	}
 	fmt.Printf("Is %v alive?: %v\n", endpoint, *isAlive)
 }

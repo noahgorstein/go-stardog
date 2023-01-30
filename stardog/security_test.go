@@ -11,7 +11,51 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func Test_GetUsers(t *testing.T) {
+func TestPermissionAction_Valid(t *testing.T) {
+	r := PermissionAction(100)
+	if r.Valid() {
+		t.Errorf("should be an invalid PermissionAction")
+	}
+	if r.String() != PermissionActionUnknown.String() {
+		t.Errorf("PermissionAction string value should be unknown")
+	}
+}
+
+func TestPermissionResourceType_Valid(t *testing.T) {
+	r := PermissionResourceType(100)
+	if r.Valid() {
+		t.Errorf("should be an invalid PermissionResourceType")
+	}
+	if r.String() != PermissionResourceTypeUnknown.String() {
+		t.Errorf("PermissionResourceType string value should be unknown")
+	}
+}
+
+func TestPermissionAction_UnmarshalText(t *testing.T) {
+	r := PermissionActionWrite
+	r.UnmarshalText([]byte("write"))
+	if r != PermissionActionWrite {
+		t.Error("should still be PermissionActionWrite")
+	}
+	r.UnmarshalText([]byte("trite"))
+	if r.Valid() {
+		t.Error("should be an invalid PermissionAction")
+	}
+}
+
+func TestPermissionResourceType_UnmarshalText(t *testing.T) {
+	r := PermissionResourceTypeDatabaseAdmin
+	r.UnmarshalText([]byte("admin"))
+	if r != PermissionResourceTypeDatabaseAdmin {
+		t.Error("should still be PermissionResourceTypeDatabaseAdmin")
+	}
+	r.UnmarshalText([]byte("trite"))
+	if r.Valid() {
+		t.Error("should be an invalid PermissionResourceType")
+	}
+}
+
+func TestSecurityService_GetUsers(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -46,7 +90,7 @@ func Test_GetUsers(t *testing.T) {
 	})
 }
 
-func Test_GetUsersWithDetails(t *testing.T) {
+func TestSecurityService_GetUsersWithDetails(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -83,24 +127,25 @@ func Test_GetUsersWithDetails(t *testing.T) {
 	wantUsers := &getUsersWithDetailsResponse{
 		Users: []UserDetails{
 			{
-				Username:    newString("admin"),
-				Roles:       []string{},
-				Enabled:     true,
-				Superuser:   true,
-				Permissions: []Permission{},
+				Username:             newString("admin"),
+				Roles:                []string{},
+				Enabled:              true,
+				Superuser:            true,
+				EffectivePermissions: []EffectivePermission{},
 			},
 			{
 				Username:  newString("frodo"),
 				Roles:     []string{"reader", "writer", "creator"},
 				Enabled:   true,
 				Superuser: false,
-				Permissions: []Permission{
+				EffectivePermissions: []EffectivePermission{
 					{
-						Explicit:     newTrue(),
-						Action:       string("READ"),
-						ResourceType: string(Database),
-						Resource:     []string{"myDatabase"},
-					},
+						Explicit: true,
+						Permission: Permission{
+							Action:       PermissionActionRead,
+							ResourceType: PermissionResourceTypeDatabase,
+							Resource:     []string{"myDatabase"},
+						}},
 				},
 			},
 		},
@@ -132,7 +177,7 @@ func Test_GetUsersWithDetails(t *testing.T) {
 	})
 }
 
-func Test_GetUserPermissions(t *testing.T) {
+func TestSecurityService_GetUserPermissions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -142,7 +187,11 @@ func Test_GetUserPermissions(t *testing.T) {
       ]
     }`
 	var wantUserPermissions = []Permission{
-		{Action: "READ", ResourceType: "named-graph", Resource: []string{"db1"}}}
+		{
+			Action:       PermissionActionRead,
+			ResourceType: PermissionResourceTypeNamedGraph,
+			Resource:     []string{"db1"}},
+	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/user/%s", "bob"), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
@@ -170,7 +219,7 @@ func Test_GetUserPermissions(t *testing.T) {
 	})
 }
 
-func Test_GetUserEffectivePermissions(t *testing.T) {
+func TestSecurityService_GetUserEffectivePermissions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -179,8 +228,15 @@ func Test_GetUserEffectivePermissions(t *testing.T) {
       {"action":"DELETE","resource_type":"named-graph","resource":["db1"], "explicit": false}
       ]
     }`
-	var wantUserEffectivePermissions = []Permission{
-		{Action: "DELETE", ResourceType: "named-graph", Resource: []string{"db1"}, Explicit: newFalse()}}
+	var wantUserEffectivePermissions = []EffectivePermission{
+		{
+			Permission: Permission{
+				Action:       PermissionActionDelete,
+				ResourceType: PermissionResourceTypeNamedGraph,
+				Resource:     []string{"db1"},
+			},
+			Explicit: false},
+	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/effective/user/%s", "bob"), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
@@ -208,7 +264,7 @@ func Test_GetUserEffectivePermissions(t *testing.T) {
 	})
 }
 
-func Test_GetUserDetails(t *testing.T) {
+func TestSecurityService_GetUserDetails(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -248,10 +304,31 @@ func Test_GetUserDetails(t *testing.T) {
 		Enabled:   true,
 		Superuser: false,
 		Roles:     []string{},
-		Permissions: []Permission{
-			{Action: "READ", ResourceType: "db", Resource: []string{"myDatabase"}, Explicit: newTrue()},
-			{Action: "READ", ResourceType: "user", Resource: []string{"frodo"}, Explicit: newTrue()},
-			{Action: "WRITE", ResourceType: "user", Resource: []string{"frodo"}, Explicit: newTrue()},
+		EffectivePermissions: []EffectivePermission{
+			{
+				Permission: Permission{
+					Action:       PermissionActionRead,
+					ResourceType: PermissionResourceTypeDatabase,
+					Resource:     []string{"myDatabase"},
+				},
+				Explicit: true,
+			},
+			{
+				Permission: Permission{
+					Action:       PermissionActionRead,
+					ResourceType: PermissionResourceTypeUser,
+					Resource:     []string{"frodo"},
+				},
+				Explicit: true,
+			},
+			{
+				Permission: Permission{
+					Action:       PermissionActionWrite,
+					ResourceType: PermissionResourceTypeUser,
+					Resource:     []string{"frodo"},
+				},
+				Explicit: true,
+			},
 		},
 	}
 	mux.HandleFunc(fmt.Sprintf("/admin/users/%s", "bob"), func(w http.ResponseWriter, r *http.Request) {
@@ -280,7 +357,7 @@ func Test_GetUserDetails(t *testing.T) {
 	})
 }
 
-func Test_IsSuperuser(t *testing.T) {
+func TestSecurityService_IsSuperuser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -313,7 +390,7 @@ func Test_IsSuperuser(t *testing.T) {
 	})
 }
 
-func Test_IsEnabled(t *testing.T) {
+func TestSecurityService_IsEnabled(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -346,7 +423,7 @@ func Test_IsEnabled(t *testing.T) {
 	})
 }
 
-func Test_CreateUser(t *testing.T) {
+func TestSecurityService_CreateUser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -379,7 +456,7 @@ func Test_CreateUser(t *testing.T) {
 	})
 }
 
-func Test_DeleteUser(t *testing.T) {
+func TestSecurityService_DeleteUser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -401,7 +478,7 @@ func Test_DeleteUser(t *testing.T) {
 	})
 }
 
-func Test_ChangeUserPassword(t *testing.T) {
+func TestSecurityService_ChangeUserPassword(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -433,7 +510,39 @@ func Test_ChangeUserPassword(t *testing.T) {
 	})
 }
 
-func Test_EnableUser(t *testing.T) {
+func TestSecurityService_EnableUser(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	var username = "frodo"
+
+	mux.HandleFunc(fmt.Sprintf("/admin/users/%s/enabled", username), func(w http.ResponseWriter, r *http.Request) {
+		v := new(enableUserRequest)
+		json.NewDecoder(r.Body).Decode(v)
+		testMethod(t, r, "PUT")
+		testHeader(t, r, "Content-Type", "application/json")
+
+		want := &enableUserRequest{Enabled: true}
+		if !cmp.Equal(v, want) {
+			t.Errorf("Request body = %+v, want %+v", v, want)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ctx := context.Background()
+	_, err := client.Security.EnableUser(ctx, username)
+	if err != nil {
+		t.Errorf("Security.EnableUser returned error: %v", err)
+	}
+
+	const methodName = "EnableUser"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		return client.Security.EnableUser(nil, username)
+	})
+}
+
+func TestSecurityService_DisableUser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -454,18 +563,18 @@ func Test_EnableUser(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_, err := client.Security.EnableUser(ctx, username, false)
+	_, err := client.Security.DisableUser(ctx, username)
 	if err != nil {
-		t.Errorf("Security.SetEnabled returned error: %v", err)
+		t.Errorf("Security.DisableUser returned error: %v", err)
 	}
 
-	const methodName = "SetEnabled"
+	const methodName = "DisableUser"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.Security.EnableUser(nil, "someone", false)
+		return client.Security.DisableUser(nil, username)
 	})
 }
 
-func Test_GetRoles(t *testing.T) {
+func TestSecurityService_GetRoles(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -500,7 +609,7 @@ func Test_GetRoles(t *testing.T) {
 	})
 }
 
-func Test_GetRolesWithDetails(t *testing.T) {
+func TestSecurityService_GetRolesWithDetails(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -540,8 +649,8 @@ func Test_GetRolesWithDetails(t *testing.T) {
 				Rolename: "reader",
 				Permissions: []Permission{
 					{
-						Action:       "READ",
-						ResourceType: "*",
+						Action:       PermissionActionRead,
+						ResourceType: PermissionResourceTypeAll,
 						Resource:     []string{"*"},
 					},
 				},
@@ -550,8 +659,8 @@ func Test_GetRolesWithDetails(t *testing.T) {
 				Rolename: "writer",
 				Permissions: []Permission{
 					{
-						Action:       "WRITE",
-						ResourceType: "*",
+						Action:       PermissionActionWrite,
+						ResourceType: PermissionResourceTypeAll,
 						Resource:     []string{"*"},
 					},
 				},
@@ -585,7 +694,7 @@ func Test_GetRolesWithDetails(t *testing.T) {
 	})
 }
 
-func Test_GetRolesAssignedToUser(t *testing.T) {
+func TestSecurityService_GetRolesAssignedToUser(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -621,7 +730,7 @@ func Test_GetRolesAssignedToUser(t *testing.T) {
 	})
 }
 
-func Test_CreateRole(t *testing.T) {
+func TestSecurityService_CreateRole(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -652,7 +761,7 @@ func Test_CreateRole(t *testing.T) {
 	})
 }
 
-func Test_GetRolePermissions(t *testing.T) {
+func TestSecurityService_GetRolePermissions(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -664,7 +773,11 @@ func Test_GetRolePermissions(t *testing.T) {
       ]
     }`
 	var wantRolePermissions = []Permission{
-		{Action: "READ", ResourceType: "named-graph", Resource: []string{"db1"}}}
+		{
+			Action:       PermissionActionRead,
+			ResourceType: PermissionResourceTypeNamedGraph,
+			Resource:     []string{"db1"},
+		}}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/role/%s", rolename), func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
@@ -692,12 +805,16 @@ func Test_GetRolePermissions(t *testing.T) {
 	})
 }
 
-func Test_GrantRolePermission(t *testing.T) {
+func TestSecurityService_GrantRolePermission(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
 	var rolename = "reader"
-	var permission = &Permission{Action: "read", ResourceType: "db", Resource: []string{"*"}}
+	var permission = &Permission{
+		Action:       PermissionActionRead,
+		ResourceType: PermissionResourceTypeDatabase,
+		Resource:     []string{"*"},
+	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/role/%s", rolename), func(w http.ResponseWriter, r *http.Request) {
 		v := new(Permission)
@@ -725,12 +842,15 @@ func Test_GrantRolePermission(t *testing.T) {
 	})
 }
 
-func Test_RevokeRolePermission(t *testing.T) {
+func TestSecurityService_RevokeRolePermission(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
 	var rolename = "reader"
-	var permission = &Permission{Action: "read", ResourceType: "db", Resource: []string{"*"}}
+	var permission = &Permission{
+		Action:       PermissionActionRead,
+		ResourceType: PermissionResourceTypeDatabase,
+		Resource:     []string{"*"}}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/role/%s/delete", rolename), func(w http.ResponseWriter, r *http.Request) {
 		v := new(Permission)
@@ -758,7 +878,7 @@ func Test_RevokeRolePermission(t *testing.T) {
 	})
 }
 
-func Test_DeleteRole(t *testing.T) {
+func TestSecurityService_DeleteRole(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -787,7 +907,7 @@ func Test_DeleteRole(t *testing.T) {
 	})
 }
 
-func Test_GetUsersAssignedRole(t *testing.T) {
+func TestSecurityService_GetUsersAssignedRole(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -823,12 +943,16 @@ func Test_GetUsersAssignedRole(t *testing.T) {
 	})
 }
 
-func Test_GrantUserPermission(t *testing.T) {
+func TestSecurityService_GrantUserPermission(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
 	var username = "frodo"
-	var permission = &Permission{Action: "read", ResourceType: "db", Resource: []string{"*"}}
+	var permission = &Permission{
+		Action:       PermissionActionRead,
+		ResourceType: PermissionResourceTypeDatabase,
+		Resource:     []string{"*"},
+	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/user/%s", username), func(w http.ResponseWriter, r *http.Request) {
 		v := new(Permission)
@@ -856,12 +980,16 @@ func Test_GrantUserPermission(t *testing.T) {
 	})
 }
 
-func Test_RevokeUserPermission(t *testing.T) {
+func TestSecurityService_RevokeUserPermission(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
 	var username = "frodo"
-	var permission = &Permission{Action: "read", ResourceType: "db", Resource: []string{"*"}}
+	var permission = &Permission{
+		Action:       PermissionActionRead,
+		ResourceType: PermissionResourceTypeDatabase,
+		Resource:     []string{"*"},
+	}
 
 	mux.HandleFunc(fmt.Sprintf("/admin/permissions/user/%s/delete", username), func(w http.ResponseWriter, r *http.Request) {
 		v := new(Permission)
@@ -889,7 +1017,7 @@ func Test_RevokeUserPermission(t *testing.T) {
 	})
 }
 
-func Test_AssignRole(t *testing.T) {
+func TestSecurityService_AssignRole(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -922,7 +1050,7 @@ func Test_AssignRole(t *testing.T) {
 	})
 }
 
-func Test_OverwriteRoles(t *testing.T) {
+func TestSecurityService_OverwriteRoles(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -955,7 +1083,7 @@ func Test_OverwriteRoles(t *testing.T) {
 	})
 }
 
-func Test_UnassignRole(t *testing.T) {
+func TestSecurityService_UnassignRole(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -976,18 +1104,4 @@ func Test_UnassignRole(t *testing.T) {
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		return client.Security.UnassignRole(nil, username, rolename)
 	})
-}
-
-func Test_NewPermission(t *testing.T) {
-	newPermission := NewPermission(Read, Database, []string{"*"})
-
-	want := &Permission{
-		Action:       string(Read),
-		ResourceType: string(Database),
-		Resource:     []string{"*"},
-	}
-
-	if !cmp.Equal(newPermission, want) {
-		t.Errorf("NewPermission returned %+v, want %+v", newPermission, want)
-	}
 }

@@ -4,7 +4,9 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"syscall"
@@ -45,8 +47,7 @@ func main() {
 
 	client, err := stardog.NewClient(endpoint, basicAuthTransport.Client())
 	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("error creating stardog client: %v", err)
 	}
 
 	datasets := []stardog.Dataset{
@@ -77,28 +78,15 @@ func main() {
 		CopyToServer:    true,
 	}
 
-	msg, _, err := client.DatabaseAdmin.CreateDatabase(context.Background(), "go-stardog-test-db", opts)
-
+	creationStatus, _, err := client.DatabaseAdmin.CreateDatabase(context.Background(), "go-stardog-db", opts)
 	if err != nil {
-		fmt.Println("Unable to create database")
-		if checkStardogError(err) {
-			os.Exit(1)
+		var stardogErr *stardog.ErrorResponse
+		if errors.As(err, &stardogErr) {
+			log.Fatalf("stardog error occurred: %v", err)
 		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal("non-stardog error occurred")
 	}
-	fmt.Println(*msg)
+	// success !
+	fmt.Println(*creationStatus)
 
-}
-
-func checkStardogError(err error) bool {
-	stardogErr, ok := err.(*stardog.ErrorResponse)
-	if ok {
-		fmt.Printf("HTTP Status: %v\n", stardogErr.Response.Status)
-		fmt.Printf("Stardog Error Code: %v\n", stardogErr.Code)
-		fmt.Printf("Stardog Error Message: %v\n", stardogErr.Message)
-		return true
-	}
-	return false
 }

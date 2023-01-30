@@ -5,7 +5,9 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"syscall"
@@ -46,40 +48,28 @@ func main() {
 
 	client, err := stardog.NewClient(endpoint, basicAuthTransport.Client())
 	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
-	}
-	databases, _, err := client.DatabaseAdmin.GetDatabases(context.Background())
-	if err != nil {
-		fmt.Println("Unable to get databases")
-		if checkStardogError(err) {
-			os.Exit(1)
-		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf("unable to create stardog client: %v", err)
 	}
 
-	fmt.Printf("Database to import schema.org namespace into (%v): ", databases)
+	fmt.Print("Database to import schema.org namespace into: ")
 	database, _ := r.ReadString('\n')
 	database = strings.TrimSpace(database)
 
 	rdfFile, err := os.Open("namespaces.ttl")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf("unable to open data file to be imported: %v", err)
 	}
 
 	importNamespacesResponse, _, err := client.DatabaseAdmin.ImportNamespaces(context.Background(), database, rdfFile)
 	if err != nil {
-		fmt.Printf("Unable to export database \"%s\"\n", database)
-		if checkStardogError(err) {
-			os.Exit(1)
+		fmt.Println("unable to import namespaces")
+		var stardogErr *stardog.ErrorResponse
+		if errors.As(err, &stardogErr) {
+			log.Fatalf("stardog error occurred: %v", err)
 		}
-		// some other error took place
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf("non-stardog error occurred: %v", err)
 	}
+
 	fmt.Println()
 	fmt.Printf("Successfully imported namespace into database: \"%s\"\n", database)
 	fmt.Printf("Number of namespaces imported: %d\n", importNamespacesResponse.NumberImportedNamespaces)
@@ -87,16 +77,4 @@ func main() {
 	for _, ns := range importNamespacesResponse.UpdatedNamespaces {
 		fmt.Println(ns)
 	}
-
-}
-
-func checkStardogError(err error) bool {
-	stardogErr, ok := err.(*stardog.ErrorResponse)
-	if ok {
-		fmt.Printf("HTTP Status: %v\n", stardogErr.Response.Status)
-		fmt.Printf("Stardog Error Code: %v\n", stardogErr.Code)
-		fmt.Printf("Stardog Error Message: %v\n", stardogErr.Message)
-		return true
-	}
-	return false
 }
