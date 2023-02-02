@@ -40,6 +40,7 @@ type Client struct {
 	Security      *SecurityService
 	ServerAdmin   *ServerAdminService
 	Transaction   *TransactionService
+	Virtual       *VirtualGraphService
 }
 
 // Client returns the http.Client used by this Stardog client.
@@ -100,6 +101,7 @@ func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
 	c.Security = (*SecurityService)(&c.common)
 	c.ServerAdmin = (*ServerAdminService)(&c.common)
 	c.Transaction = (*TransactionService)(&c.common)
+	c.Virtual = (*VirtualGraphService)(&c.common)
 	return c, nil
 }
 
