@@ -164,7 +164,7 @@ func TestServerAdminService_KillProcess(t *testing.T) {
 	ctx := context.Background()
 	_, err := client.ServerAdmin.KillProcess(ctx, processID)
 	if err != nil {
-		t.Errorf("Security.DeleteUser returned error: %v", err)
+		t.Errorf("ServerAdmin.KillProcess returned error: %v", err)
 	}
 
 	const methodName = "KillProcess"

@@ -32,7 +32,7 @@ basicAuthTransport := stardog.BasicAuthTransport{
 client, _ := stardog.NewClient("http://localhost:5820", basicAuthTransport.Client())
 
 // list all users in the server
-users, _, err := client.Security.GetUsers(ctx)
+users, _, err := client.User.List(ctx)
 ```
 
 The services of a client divide the API into logical chunks and roughly correspond to structure of the [Stardog HTTP API documentation](https://stardog-union.github.io/http-docs/)
@@ -68,7 +68,7 @@ func main() {
   client, _ := stardog.NewClient("http://localhost:5820", basicAuthTransport.Client())
 
   // list all users in the server
-  users, _, err := client.Security.GetUsers(ctx)
+  users, _, err := client.User.List(ctx)
 }
 ```
 
@@ -88,7 +88,7 @@ func main() {
   client, _ := stardog.NewClient("http://localhost:5820", bearerAuthTransport.Client())
 
   // list all users in the server
-  users, _, err := client.Security.GetUsers(ctx)
+  users, _, err := client.User.List(ctx)
 }
 ```
 

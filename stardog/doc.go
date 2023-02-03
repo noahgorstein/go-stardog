@@ -18,7 +18,7 @@ access different parts of the Stardog API. For example:
 	client, _ := stardog.NewClient("http://localhost:5820", basicAuthTransport.Client())
 
 	// list all users in the server
-	users, _, err := client.Security.GetUsers(ctx)
+	users, _, err := client.User.List(ctx)
 
 The services of a client divide the API into logical chunks and roughly correspond to structure of the Stardog HTTP API documentation at https://stardog-union.github.io/http-docs/
 
@@ -51,7 +51,7 @@ For users who wish to authenticate via username and password (HTTP Basic Authent
 	  client, _ := stardog.NewClient("http://localhost:5820", basicAuthTransport.Client())
 
 	  // list all users in the server
-	  users, _, err := client.Security.GetUsers(ctx)
+	  users, _, err := client.User.List(ctx)
 	}
 
 # Token Authentication
@@ -69,7 +69,7 @@ For users who wish to authenticate via an access token (Bearer Authentication), 
 	  client, _ := stardog.NewClient("http://localhost:5820", bearerAuthTransport.Client())
 
 	  // list all users in the server
-	  users, _, err := client.Security.GetUsers(ctx)
+	  users, _, err := client.User.List(ctx)
 	}
 */
 package stardog
