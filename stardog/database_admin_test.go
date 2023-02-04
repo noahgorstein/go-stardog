@@ -315,7 +315,7 @@ func TestDatabaseAdminService_ExportObfuscatedData_serverSideConfig(t *testing.T
 	}
 }
 
-func TestDatabaseAdminService_OnlineDatabase(t *testing.T) {
+func TestDatabaseAdminService_Online(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -328,18 +328,18 @@ func TestDatabaseAdminService_OnlineDatabase(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_, err := client.DatabaseAdmin.OnlineDatabase(ctx, db)
+	_, err := client.DatabaseAdmin.Online(ctx, db)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.OnlineDatabase returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Online returned error: %v", err)
 	}
 
-	const methodName = "OnlineDatabase"
+	const methodName = "Online"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.DatabaseAdmin.OnlineDatabase(nil, db)
+		return client.DatabaseAdmin.Online(nil, db)
 	})
 }
 
-func TestDatabaseAdminService_OfflineDatabase(t *testing.T) {
+func TestDatabaseAdminService_Offline(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -352,18 +352,18 @@ func TestDatabaseAdminService_OfflineDatabase(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_, err := client.DatabaseAdmin.OfflineDatabase(ctx, db)
+	_, err := client.DatabaseAdmin.Offline(ctx, db)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.OfflineDatabase returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Offline returned error: %v", err)
 	}
 
-	const methodName = "OfflineDatabase"
+	const methodName = "Offline"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.DatabaseAdmin.OfflineDatabase(nil, db)
+		return client.DatabaseAdmin.Offline(nil, db)
 	})
 }
 
-func TestDatabaseAdminService_GenerateDataModel(t *testing.T) {
+func TestDatabaseAdminService_DataModel(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -386,26 +386,26 @@ func TestDatabaseAdminService_GenerateDataModel(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	opts := &GenerateDataModelOptions{
+	opts := &DataModelOptions{
 		Reasoning:    true,
 		OutputFormat: DataModelFormatText,
 	}
-	got, _, err := client.DatabaseAdmin.GenerateDataModel(ctx, db, opts)
+	got, _, err := client.DatabaseAdmin.DataModel(ctx, db, opts)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.GenerateDataModel returned error: %v", err)
+		t.Errorf("DatabaseAdmin.DataModel returned error: %v", err)
 	}
 	if want := dataModel; !cmp.Equal(got.String(), want) {
-		t.Errorf("DatabaseAdmin.GenerateDataModel = %+v, want %+v", got, want)
+		t.Errorf("DatabaseAdmin.DataModel = %+v, want %+v", got, want)
 	}
 
-	const methodName = "GenerateDataModel"
+	const methodName = "DataModel"
 	testBadOptions(t, methodName, func() (err error) {
-		opts := &GenerateDataModelOptions{}
-		_, _, err = client.DatabaseAdmin.GenerateDataModel(ctx, "\n", opts)
+		opts := &DataModelOptions{}
+		_, _, err = client.DatabaseAdmin.DataModel(ctx, "\n", opts)
 		return err
 	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.GenerateDataModel(nil, db, opts)
+		got, resp, err := client.DatabaseAdmin.DataModel(nil, db, opts)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -413,7 +413,7 @@ func TestDatabaseAdminService_GenerateDataModel(t *testing.T) {
 	})
 }
 
-func TestDatabaseAdminService_CreateDatabase(t *testing.T) {
+func TestDatabaseAdminService_Create(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -426,7 +426,7 @@ func TestDatabaseAdminService_CreateDatabase(t *testing.T) {
 		w.Write([]byte(respInfoJSON))
 
 		if r.PostFormValue("root") == "" {
-			t.Errorf("DatabaseAdmin.CreateDatabase should have a key with the name 'root' in the POST'd form")
+			t.Errorf("DatabaseAdmin.Create should have a key with the name 'root' in the POST'd form")
 		}
 	})
 
@@ -468,33 +468,33 @@ func TestDatabaseAdminService_CreateDatabase(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	info, _, err := client.DatabaseAdmin.CreateDatabase(ctx, dbName, optsWithRealDatasets)
+	info, _, err := client.DatabaseAdmin.Create(ctx, dbName, optsWithRealDatasets)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.CreateDatabase returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Create returned error: %v", err)
 	}
 	if info == nil {
-		t.Errorf("DatabaseAdmin.CreateDatabase should return information string for succesful db creation.")
+		t.Errorf("DatabaseAdmin.Create should return information string for succesful db creation.")
 	}
 
-	info, _, err = client.DatabaseAdmin.CreateDatabase(ctx, dbName, optsWithFakeDatasets)
+	info, _, err = client.DatabaseAdmin.Create(ctx, dbName, optsWithFakeDatasets)
 	if err == nil {
-		t.Error("DatabaseAdmin.CreateDatabase should return an error due to not being able to find the files.")
+		t.Error("DatabaseAdmin.Create should return an error due to not being able to find the files.")
 	}
 	if info != nil {
-		t.Errorf("DatabaseAdmin.CreateDatabase should not return information string for succesful db creation.")
+		t.Errorf("DatabaseAdmin.Create should not return information string for succesful db creation.")
 	}
 
-	info, _, err = client.DatabaseAdmin.CreateDatabase(ctx, dbName, nil)
+	info, _, err = client.DatabaseAdmin.Create(ctx, dbName, nil)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.CreateDatabase returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Create returned error: %v", err)
 	}
 	if info == nil {
-		t.Errorf("DatabaseAdmin.CreateDatabase should return information string for succesful db creation.")
+		t.Errorf("DatabaseAdmin.Create should return information string for succesful db creation.")
 	}
 
-	const methodName = "CreateDatabase"
+	const methodName = "Create"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.CreateDatabase(nil, dbName, nil)
+		got, resp, err := client.DatabaseAdmin.Create(nil, dbName, nil)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -503,7 +503,7 @@ func TestDatabaseAdminService_CreateDatabase(t *testing.T) {
 
 }
 
-func TestDatabaseAdminService_RestoreDatabase(t *testing.T) {
+func TestDatabaseAdminService_Restore(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -520,25 +520,25 @@ func TestDatabaseAdminService_RestoreDatabase(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_, err := client.DatabaseAdmin.RestoreDatabase(ctx, pathToBackup, restoreDatabaseOptions)
+	_, err := client.DatabaseAdmin.Restore(ctx, pathToBackup, restoreDatabaseOptions)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.RestoreDatabase returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Restore returned error: %v", err)
 	}
 
-	const methodName = "RestoreDatabase"
+	const methodName = "Restore"
 	testBadOptions(t, methodName, func() (err error) {
 		opts := &RestoreDatabaseOptions{
 			Name: "restoredDb",
 		}
-		_, err = client.DatabaseAdmin.RestoreDatabase(ctx, "\n", opts)
+		_, err = client.DatabaseAdmin.Restore(ctx, "\n", opts)
 		return err
 	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.DatabaseAdmin.RestoreDatabase(nil, pathToBackup, restoreDatabaseOptions)
+		return client.DatabaseAdmin.Restore(nil, pathToBackup, restoreDatabaseOptions)
 	})
 }
 
-func TestDatabaseAdminService_RepairDatabase(t *testing.T) {
+func TestDatabaseAdminService_Repair(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -551,18 +551,18 @@ func TestDatabaseAdminService_RepairDatabase(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_, err := client.DatabaseAdmin.RepairDatabase(ctx, db)
+	_, err := client.DatabaseAdmin.Repair(ctx, db)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.RepairDatabase returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Repair returned error: %v", err)
 	}
 
-	const methodName = "RepairDatabase"
+	const methodName = "Repair"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.DatabaseAdmin.RepairDatabase(nil, db)
+		return client.DatabaseAdmin.Repair(nil, db)
 	})
 }
 
-func TestDatabaseAdminService_OptimizeDatabase(t *testing.T) {
+func TestDatabaseAdminService_Optimize(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -575,18 +575,18 @@ func TestDatabaseAdminService_OptimizeDatabase(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_, err := client.DatabaseAdmin.OptimizeDatabase(ctx, db)
+	_, err := client.DatabaseAdmin.Optimize(ctx, db)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.OptimizeDatabase returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Optimize returned error: %v", err)
 	}
 
-	const methodName = "OptimizeDatabase"
+	const methodName = "Optimize"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.DatabaseAdmin.OptimizeDatabase(nil, db)
+		return client.DatabaseAdmin.Optimize(nil, db)
 	})
 }
 
-func TestDatabaseAdminService_DropDatabase(t *testing.T) {
+func TestDatabaseAdminService_Drop(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -599,18 +599,18 @@ func TestDatabaseAdminService_DropDatabase(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_, err := client.DatabaseAdmin.DropDatabase(ctx, db)
+	_, err := client.DatabaseAdmin.Drop(ctx, db)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.DropDatabase returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Drop returned error: %v", err)
 	}
 
-	const methodName = "DropDatabase"
+	const methodName = "Drop"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.DatabaseAdmin.DropDatabase(nil, db)
+		return client.DatabaseAdmin.Drop(nil, db)
 	})
 }
 
-func TestDatabaseAdminService_GetAllDatabaseOptionsDetails(t *testing.T) {
+func TestDatabaseAdminService_MetadataDocumentation(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -673,17 +673,17 @@ func TestDatabaseAdminService_GetAllDatabaseOptionsDetails(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	got, _, err := client.DatabaseAdmin.GetAllDatabaseOptionDetails(ctx)
+	got, _, err := client.DatabaseAdmin.MetadataDocumentation(ctx)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.GetAllDatabaseOptionDetails returned error: %v", err)
+		t.Errorf("DatabaseAdmin.MetadataDocumentation returned error: %v", err)
 	}
 	if want := databaseOptions; !cmp.Equal(got, want) {
-		t.Errorf("DatabaseAdmin.GetAllDatabaseOptionDetails = %+v, want %+v", got, want)
+		t.Errorf("DatabaseAdmin.MetadataDocumentation = %+v, want %+v", got, want)
 	}
 
-	const methodName = "GetAllDatabaseOptionDetails"
+	const methodName = "MetadataDocumentation"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.GetAllDatabaseOptionDetails(nil)
+		got, resp, err := client.DatabaseAdmin.MetadataDocumentation(nil)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -691,7 +691,7 @@ func TestDatabaseAdminService_GetAllDatabaseOptionsDetails(t *testing.T) {
 	})
 }
 
-func TestDatabaseAdminService_GetNamespaces(t *testing.T) {
+func TestDatabaseAdminService_Namespaces(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -736,17 +736,17 @@ func TestDatabaseAdminService_GetNamespaces(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	got, _, err := client.DatabaseAdmin.GetNamespaces(ctx, db)
+	got, _, err := client.DatabaseAdmin.Namespaces(ctx, db)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.GetNamespaces returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Namespaces returned error: %v", err)
 	}
 	if want := wantNamespaces; !cmp.Equal(got, want) {
-		t.Errorf("DatabaseAdmin.GetNamespaces = %+v, want %+v", got, want)
+		t.Errorf("DatabaseAdmin.Namespaces = %+v, want %+v", got, want)
 	}
 
-	const methodName = "GetNamespaces"
+	const methodName = "Namespaces"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.GetNamespaces(nil, db)
+		got, resp, err := client.DatabaseAdmin.Namespaces(nil, db)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -845,7 +845,7 @@ func TestDatabaseAdminService_ImportNamespaces(t *testing.T) {
 	}
 }
 
-func TestDatabaseAdminService_GetDatabaseOptions(t *testing.T) {
+func TestDatabaseAdminService_Metadata(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -863,17 +863,17 @@ func TestDatabaseAdminService_GetDatabaseOptions(t *testing.T) {
 
 	ctx := context.Background()
 	opts := []string{"search.enabled"}
-	got, _, err := client.DatabaseAdmin.GetDatabaseOptions(ctx, db, opts)
+	got, _, err := client.DatabaseAdmin.Metadata(ctx, db, opts)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.GetDatabaseOptions returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Metadata returned error: %v", err)
 	}
 	if want := wantDatabasOptions; !cmp.Equal(got, want) {
-		t.Errorf("DatabaseAdmin.GetDatabaseOptions = %+v, want %+v", got, want)
+		t.Errorf("DatabaseAdmin.Metadata = %+v, want %+v", got, want)
 	}
 
-	const methodName = "GetDatabaseOptions"
+	const methodName = "Metadata"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.GetDatabaseOptions(nil, db, opts)
+		got, resp, err := client.DatabaseAdmin.Metadata(nil, db, opts)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -881,7 +881,7 @@ func TestDatabaseAdminService_GetDatabaseOptions(t *testing.T) {
 	})
 }
 
-func TestDatabaseAdminService_SetDatabaseOptions(t *testing.T) {
+func TestDatabaseAdminService_SetMetadata(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -896,17 +896,17 @@ func TestDatabaseAdminService_SetDatabaseOptions(t *testing.T) {
 
 	ctx := context.Background()
 	opts := map[string]interface{}{"search.enabled": true}
-	_, err := client.DatabaseAdmin.SetDatabaseOptions(ctx, db, opts)
+	_, err := client.DatabaseAdmin.SetMetadata(ctx, db, opts)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.SetDatabaseOptions returned error: %v", err)
+		t.Errorf("DatabaseAdmin.SetMetadata returned error: %v", err)
 	}
-	const methodName = "SetDatabaseOptions"
+	const methodName = "SetMetadata"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		return client.DatabaseAdmin.SetDatabaseOptions(nil, db, opts)
+		return client.DatabaseAdmin.SetMetadata(nil, db, opts)
 	})
 }
 
-func TestDatabaseAdminService_GetDatabases(t *testing.T) {
+func TestDatabaseAdminService_ListDatabases(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -921,17 +921,17 @@ func TestDatabaseAdminService_GetDatabases(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	got, _, err := client.DatabaseAdmin.GetDatabases(ctx)
+	got, _, err := client.DatabaseAdmin.ListDatabases(ctx)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.GetDatabases returned error: %v", err)
+		t.Errorf("DatabaseAdmin.ListDatabases returned error: %v", err)
 	}
 	if want := wantDatabases; !cmp.Equal(got, want) {
-		t.Errorf("DatabaseAdmin.GetDatabases = %+v, want %+v", got, want)
+		t.Errorf("DatabaseAdmin.ListDatabases = %+v, want %+v", got, want)
 	}
 
-	const methodName = "GetDatabases"
+	const methodName = "ListDatabases"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.GetDatabases(nil)
+		got, resp, err := client.DatabaseAdmin.ListDatabases(nil)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -939,7 +939,7 @@ func TestDatabaseAdminService_GetDatabases(t *testing.T) {
 	})
 }
 
-func TestDatabaseAdminService_GetAllDatabaseOptions(t *testing.T) {
+func TestDatabaseAdminService_AllMetadata(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -1025,17 +1025,17 @@ func TestDatabaseAdminService_GetAllDatabaseOptions(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	got, _, err := client.DatabaseAdmin.GetAllDatabaseOptions(ctx, "db1")
+	got, _, err := client.DatabaseAdmin.AllMetadata(ctx, "db1")
 	if err != nil {
-		t.Errorf("DatabaseAdmin.GetAllDatabaseOptions returned error: %v", err)
+		t.Errorf("DatabaseAdmin.AllMetadata returned error: %v", err)
 	}
 	if want := wantDatabaseOptions; !cmp.Equal(len(got), len(want)) {
-		t.Errorf("DatabaseAdmin.GetAllDatabaseOptions returned map with length %+v, want %+v", got, want)
+		t.Errorf("DatabaseAdmin.AllMetadata returned map with length %+v, want %+v", got, want)
 	}
 
-	const methodName = "GetAllDatabaseOptions"
+	const methodName = "AllMetadata"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.GetAllDatabaseOptions(nil, "db1")
+		got, resp, err := client.DatabaseAdmin.AllMetadata(nil, "db1")
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -1043,7 +1043,7 @@ func TestDatabaseAdminService_GetAllDatabaseOptions(t *testing.T) {
 	})
 }
 
-func TestDatabaseAdminService_GetDatabasesWithOptions(t *testing.T) {
+func TestDatabaseAdminService_ListWithMetadata(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -1134,17 +1134,17 @@ func TestDatabaseAdminService_GetDatabasesWithOptions(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	got, _, err := client.DatabaseAdmin.GetAllDatabasesWithOptions(ctx)
+	got, _, err := client.DatabaseAdmin.ListWithMetadata(ctx)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.GetAllDatabasesWithOptions returned error: %v", err)
+		t.Errorf("DatabaseAdmin.ListWithMetadata returned error: %v", err)
 	}
 	if want := wantDatabasesWithOptions; !cmp.Equal(len(got), len(want)) {
-		t.Errorf("DatabaseAdmin.GetAllDatabasesWithOptions returned slice has length %+v, want %+v", got, want)
+		t.Errorf("DatabaseAdmin.ListWithMetadata returned slice has length %+v, want %+v", got, want)
 	}
 
-	const methodName = "GetAllDatabasesWithOptions"
+	const methodName = "ListWithMetadata"
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.GetAllDatabasesWithOptions(nil)
+		got, resp, err := client.DatabaseAdmin.ListWithMetadata(nil)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -1152,11 +1152,11 @@ func TestDatabaseAdminService_GetDatabasesWithOptions(t *testing.T) {
 	})
 }
 
-func TestDatabaseAdminService_GetDatabaseSize(t *testing.T) {
+func TestDatabaseAdminService_Size(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
-	getDatabaseSizeOptions := &GetDatabaseSizeOptions{
+	getDatabaseSizeOptions := &DatabaseSizeOptions{
 		Exact: true,
 	}
 	dbName := "db1"
@@ -1172,24 +1172,24 @@ func TestDatabaseAdminService_GetDatabaseSize(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	got, _, err := client.DatabaseAdmin.GetDatabaseSize(ctx, dbName, getDatabaseSizeOptions)
+	got, _, err := client.DatabaseAdmin.Size(ctx, dbName, getDatabaseSizeOptions)
 	if err != nil {
-		t.Errorf("DatabaseAdmin.GetDatabaseSize returned error: %v", err)
+		t.Errorf("DatabaseAdmin.Size returned error: %v", err)
 	}
 	if !cmp.Equal(got, want) {
-		t.Errorf("DatabaseAdmin.GetDatabaseSize = %+v, want %+v", got, want)
+		t.Errorf("DatabaseAdmin.Size = %+v, want %+v", got, want)
 	}
 
-	const methodName = "GetDatabaseSize"
+	const methodName = "Size"
 	testBadOptions(t, methodName, func() (err error) {
-		opts := &GetDatabaseSizeOptions{
+		opts := &DatabaseSizeOptions{
 			Exact: true,
 		}
-		_, _, err = client.DatabaseAdmin.GetDatabaseSize(ctx, "\n", opts)
+		_, _, err = client.DatabaseAdmin.Size(ctx, "\n", opts)
 		return err
 	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
-		got, resp, err := client.DatabaseAdmin.GetDatabaseSize(nil, dbName, getDatabaseSizeOptions)
+		got, resp, err := client.DatabaseAdmin.Size(nil, dbName, getDatabaseSizeOptions)
 		if got != nil {
 			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
 		}
@@ -1197,7 +1197,7 @@ func TestDatabaseAdminService_GetDatabaseSize(t *testing.T) {
 	})
 }
 
-func TestDatabaseAdminService_GetDatabaseSize_nonIntegerResponse(t *testing.T) {
+func TestDatabaseAdminService_Size_nonIntegerResponse(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 
@@ -1213,8 +1213,8 @@ func TestDatabaseAdminService_GetDatabaseSize_nonIntegerResponse(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_, _, err := client.DatabaseAdmin.GetDatabaseSize(ctx, dbName, nil)
+	_, _, err := client.DatabaseAdmin.Size(ctx, dbName, nil)
 	if err == nil {
-		t.Fatalf("DatabaseAdmin.GetDatabaseSize should return an error if response cannot be converted to an integer")
+		t.Fatalf("DatabaseAdmin.Size should return an error if response cannot be converted to an integer")
 	}
 }

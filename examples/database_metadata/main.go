@@ -55,7 +55,7 @@ func main() {
 	database = strings.TrimSpace(database)
 
 	fmt.Println("Offlining the database...")
-	_, err = client.DatabaseAdmin.OfflineDatabase(context.Background(), database)
+	_, err = client.DatabaseAdmin.Offline(context.Background(), database)
 	if err != nil {
 		var stardogErr *stardog.ErrorResponse
 		if errors.As(err, &stardogErr) {
@@ -69,7 +69,7 @@ func main() {
 	setOptions := map[string]interface{}{
 		"search.enabled": true,
 	}
-	_, err = client.DatabaseAdmin.SetDatabaseOptions(context.Background(), database, setOptions)
+	_, err = client.DatabaseAdmin.SetMetadata(context.Background(), database, setOptions)
 	if err != nil {
 		var stardogErr *stardog.ErrorResponse
 		if errors.As(err, &stardogErr) {
@@ -79,7 +79,7 @@ func main() {
 	}
 
 	configOptions := []string{"search.enabled"}
-	opts, _, err := client.DatabaseAdmin.GetDatabaseOptions(context.Background(), database, configOptions)
+	opts, _, err := client.DatabaseAdmin.Metadata(context.Background(), database, configOptions)
 	if err != nil {
 		var stardogErr *stardog.ErrorResponse
 		if errors.As(err, &stardogErr) {
@@ -95,7 +95,7 @@ func main() {
 	fmt.Println("----------------")
 
 	fmt.Printf("Onlining the database %s...\n", database)
-	_, err = client.DatabaseAdmin.OnlineDatabase(context.Background(), database)
+	_, err = client.DatabaseAdmin.Online(context.Background(), database)
 	if err != nil {
 		fmt.Printf("Unable to online database \"%s\"\n", database)
 		var stardogErr *stardog.ErrorResponse

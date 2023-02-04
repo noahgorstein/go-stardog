@@ -46,7 +46,7 @@ func main() {
 	}
 	client, _ := stardog.NewClient("http://localhost:5820", basicAuthTransport.Client())
 
-	dbs, _, err := client.DatabaseAdmin.GetDatabases(context.Background())
+	dbs, _, err := client.DatabaseAdmin.ListDatabases(context.Background())
 	if err != nil {
 		var stardogErr *stardog.ErrorResponse
 		if errors.As(err, &stardogErr) {
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	for _, db := range dbs {
-		size, _, err := client.DatabaseAdmin.GetDatabaseSize(context.Background(), db, &stardog.GetDatabaseSizeOptions{Exact: true})
+		size, _, err := client.DatabaseAdmin.Size(context.Background(), db, &stardog.DatabaseSizeOptions{Exact: true})
 		if err != nil {
 			var stardogErr *stardog.ErrorResponse
 			if errors.As(err, &stardogErr) {

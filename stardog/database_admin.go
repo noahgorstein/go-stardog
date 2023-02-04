@@ -18,12 +18,12 @@ import (
 // DatabaseAdminService handles communication with the database admin related methods of the Stardog API.
 type DatabaseAdminService service
 
-// GetDatabaseSizeOptions specifies the optional parameters to the [DatabaseAdminService.GetDatabaseSize] method.
-type GetDatabaseSizeOptions struct {
+// DatabaseSizeOptions specifies the optional parameters to the [DatabaseAdminService.Size] method.
+type DatabaseSizeOptions struct {
 	Exact bool `url:"exact"`
 }
 
-// DataModelFormat represents an output format for [DatabaseAdminService.GenerateDataModel].
+// DataModelFormat represents an output format for [DatabaseAdminService.DataModel].
 // The zero value for a DataModelFormat is  [DataModelFormatUnknown]
 type DataModelFormat int
 
@@ -68,8 +68,8 @@ type ImportNamespacesResponse struct {
 	UpdatedNamespaces        []string `json:"namespaces"`
 }
 
-// GenerateDataModelOptions are options for the [DatabaseAdminService.GenerateDataModel] method
-type GenerateDataModelOptions struct {
+// DataModelOptions are options for the [DatabaseAdminService.DataModel] method
+type DataModelOptions struct {
 	// Enable reasoning
 	Reasoning bool `url:"reasoning,omitempty"`
 
@@ -77,7 +77,7 @@ type GenerateDataModelOptions struct {
 	OutputFormat DataModelFormat `url:"output,omitempty"`
 }
 
-// RestoreDatabaseOptions are options for the [DatabaseAdminService.RestoreDatabase] method
+// RestoreDatabaseOptions are options for the [DatabaseAdminService.Restore] method
 type RestoreDatabaseOptions struct {
 	// Whether or not to overwrite an existing database with this backup
 	Force bool `url:"force,omitempty"`
@@ -105,10 +105,6 @@ type DatabaseOptionDetails struct {
 	Label             string      `json:"label"`
 	Description       string      `json:"description"`
 	DefaultValue      interface{} `json:"defaultValue"`
-}
-
-type createDatabaseResponse struct {
-	Message *string `json:"message"`
 }
 
 // CreateDatabaseOptions specifies the optional parameters to the [DatabaseAdminService.CreateDatabase] method.
@@ -164,6 +160,23 @@ type ExportObfuscatedDataOptions struct {
 	ObfuscationConfig *os.File `url:"-"`
 }
 
+// response for Namespaces
+type databaseNamespacesResponse struct {
+	Namespaces []Namespace `json:"namespaces"`
+}
+
+// response for ListWithMetadata
+type listDatabasesWithMetadataResponse struct {
+	Databases []map[string]interface{} `json:"databases"`
+}
+
+// response for List
+type listDatabasesResponse struct {
+	Databases []string `json:"databases"`
+}
+
+// createDatabaseRequest is the JSON Create needs to satisfy the request body
+// Stardog requires for datbase creation
 type createDatabaseRequest struct {
 	Name         string                      `json:"dbname"`
 	Options      map[string]interface{}      `json:"options"`
@@ -176,22 +189,15 @@ type createDatabaseRequestFile struct {
 	Context  string `json:"context,omitempty"`
 }
 
-type getNamespaceResponse struct {
-	Namespaces []Namespace `json:"namespaces"`
+// response for Create
+type createDatabaseResponse struct {
+	Message *string `json:"message"`
 }
 
-type getDatabasesWithOptionsResponse struct {
-	Databases []map[string]interface{} `json:"databases"`
-}
-
-type getDatabasesResponse struct {
-	Databases []string `json:"databases"`
-}
-
-// GetDatabaseOptions returns the value of specific metadata options for a database.
+// Metadata returns the value of specific metadata options for a database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/getDatabaseOptions
-func (s *DatabaseAdminService) GetDatabaseOptions(ctx context.Context, database string, opts []string) (map[string]interface{}, *Response, error) {
+func (s *DatabaseAdminService) Metadata(ctx context.Context, database string, opts []string) (map[string]interface{}, *Response, error) {
 	u := fmt.Sprintf("admin/databases/%s/options", database)
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
@@ -216,10 +222,10 @@ func (s *DatabaseAdminService) GetDatabaseOptions(ctx context.Context, database 
 	return data, resp, err
 }
 
-// SetDatabaseOptions sets the value of specific configuration options (a.k.a. metadata) for a database.
+// SetMetadata sets the value of specific configuration options (a.k.a. metadata) for a database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/setDatabaseOption
-func (s *DatabaseAdminService) SetDatabaseOptions(ctx context.Context, database string, opts map[string]interface{}) (*Response, error) {
+func (s *DatabaseAdminService) SetMetadata(ctx context.Context, database string, opts map[string]interface{}) (*Response, error) {
 	u := fmt.Sprintf("admin/databases/%s/options", database)
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
@@ -238,11 +244,11 @@ func (s *DatabaseAdminService) SetDatabaseOptions(ctx context.Context, database 
 	return resp, err
 }
 
-// GetAllDatabaseOptions returns all the database configuration options (a.k.a. metadata)
+// AllMetadata returns all the database configuration options (a.k.a. metadata)
 // and their set values for a database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/getAllDatabaseOptions
-func (s *DatabaseAdminService) GetAllDatabaseOptions(ctx context.Context, database string) (map[string]interface{}, *Response, error) {
+func (s *DatabaseAdminService) AllMetadata(ctx context.Context, database string) (map[string]interface{}, *Response, error) {
 	u := fmt.Sprintf("admin/databases/%s/options", database)
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -260,11 +266,10 @@ func (s *DatabaseAdminService) GetAllDatabaseOptions(ctx context.Context, databa
 	return data, resp, err
 }
 
-// GetAllDatabasesWithOptions returns all the database configuration options (a.k.a. metadata) and
-// their set values for all databases.
+// ListWithMetadata returns all databases with their database configuration options (a.k.a. metadata)
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/listDatabasesWithOptions
-func (s *DatabaseAdminService) GetAllDatabasesWithOptions(ctx context.Context) ([]map[string]interface{}, *Response, error) {
+func (s *DatabaseAdminService) ListWithMetadata(ctx context.Context) ([]map[string]interface{}, *Response, error) {
 	u := "admin/databases/options"
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -274,7 +279,7 @@ func (s *DatabaseAdminService) GetAllDatabasesWithOptions(ctx context.Context) (
 		return nil, nil, err
 	}
 
-	var data getDatabasesWithOptionsResponse
+	var data listDatabasesWithMetadataResponse
 	resp, err := s.client.Do(ctx, req, &data)
 	if err != nil {
 		return nil, resp, err
@@ -282,10 +287,10 @@ func (s *DatabaseAdminService) GetAllDatabasesWithOptions(ctx context.Context) (
 	return data.Databases, resp, err
 }
 
-// GetDatabases returns the names of all databases in the server.
+// ListDatabases returns the names of all databases in the server.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/listDatabases
-func (s *DatabaseAdminService) GetDatabases(ctx context.Context) ([]string, *Response, error) {
+func (s *DatabaseAdminService) ListDatabases(ctx context.Context) ([]string, *Response, error) {
 	u := "admin/databases"
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -295,7 +300,7 @@ func (s *DatabaseAdminService) GetDatabases(ctx context.Context) ([]string, *Res
 		return nil, nil, err
 	}
 
-	var data getDatabasesResponse
+	var data listDatabasesResponse
 	resp, err := s.client.Do(ctx, req, &data)
 	if err != nil {
 		return nil, resp, err
@@ -303,10 +308,10 @@ func (s *DatabaseAdminService) GetDatabases(ctx context.Context) ([]string, *Res
 	return data.Databases, resp, err
 }
 
-// GetNamespaces retrieves the namespaces stored in the database.
+// Namespaces retrieves the namespaces stored in the database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/getNamespaces
-func (s *DatabaseAdminService) GetNamespaces(ctx context.Context, database string) ([]Namespace, *Response, error) {
+func (s *DatabaseAdminService) Namespaces(ctx context.Context, database string) ([]Namespace, *Response, error) {
 	u := fmt.Sprintf("%s/namespaces", database)
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -316,7 +321,7 @@ func (s *DatabaseAdminService) GetNamespaces(ctx context.Context, database strin
 		return nil, nil, err
 	}
 
-	var data getNamespaceResponse
+	var data databaseNamespacesResponse
 	resp, err := s.client.Do(ctx, req, &data)
 	if err != nil {
 		return nil, resp, err
@@ -368,10 +373,10 @@ func (s *DatabaseAdminService) ImportNamespaces(ctx context.Context, database st
 	return &importNamespacesResponse, resp, err
 }
 
-// GetDatabaseSize returns the size of the database. Size is approximate unless the GetDatabaseSizeOptions.Exact field is set to true.
+// Size returns the size of the database. Size is approximate unless the GetDatabaseSizeOptions.Exact field is set to true.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/listDatabases
-func (s *DatabaseAdminService) GetDatabaseSize(ctx context.Context, database string, opts *GetDatabaseSizeOptions) (*int, *Response, error) {
+func (s *DatabaseAdminService) Size(ctx context.Context, database string, opts *DatabaseSizeOptions) (*int, *Response, error) {
 	u := fmt.Sprintf("%s/size", database)
 	urlWithOptions, err := addOptions(u, opts)
 	if err != nil {
@@ -397,11 +402,11 @@ func (s *DatabaseAdminService) GetDatabaseSize(ctx context.Context, database str
 	return &resultAsInt, resp, err
 }
 
-// GetAllDatabaseOptionDetails returns information about all available database configuration options
+// MetadataDocumentation returns information about all available database configuration options
 // (a.k.a. metadata) including description and example values.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/getAllMetaProperties
-func (s *DatabaseAdminService) GetAllDatabaseOptionDetails(ctx context.Context) (map[string]DatabaseOptionDetails, *Response, error) {
+func (s *DatabaseAdminService) MetadataDocumentation(ctx context.Context) (map[string]DatabaseOptionDetails, *Response, error) {
 	u := "admin/config_properties"
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -419,7 +424,7 @@ func (s *DatabaseAdminService) GetAllDatabaseOptionDetails(ctx context.Context) 
 	return data, resp, err
 }
 
-// CreateDatabase creates a database, optionally with RDF and database options. CreateDatabase assumes that the
+// Create creates a database, optionally with RDF and database options. Create assumes that the
 // Paths in the Dataset(s) provided for CreateDatabaseOptions.Datasets exist on the server. If they are client side,
 // provide a value of true for CreateDatabaseOptions.CopyToServer
 //
@@ -431,7 +436,7 @@ func (s *DatabaseAdminService) GetAllDatabaseOptionDetails(ctx context.Context) 
 //	Successfully created database 'db1'.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/createNewDatabase
-func (s *DatabaseAdminService) CreateDatabase(ctx context.Context, name string, opts *CreateDatabaseOptions) (*string, *Response, error) {
+func (s *DatabaseAdminService) Create(ctx context.Context, name string, opts *CreateDatabaseOptions) (*string, *Response, error) {
 	body, writer, err := newCreateDatabaseRequestBody(name, opts)
 	if err != nil {
 		return nil, nil, err
@@ -527,11 +532,11 @@ func newCreateDatabaseRequestBody(name string, opts *CreateDatabaseOptions) (*by
 	return body, writer, err
 }
 
-// DropDatabase deletes a database
+// Drop deletes a database
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/dropDatabase
-func (s *DatabaseAdminService) DropDatabase(ctx context.Context, name string) (*Response, error) {
-	u := fmt.Sprintf("admin/databases/%s", name)
+func (s *DatabaseAdminService) Drop(ctx context.Context, database string) (*Response, error) {
+	u := fmt.Sprintf("admin/databases/%s", database)
 
 	reqHeaderOpts := &requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -545,11 +550,11 @@ func (s *DatabaseAdminService) DropDatabase(ctx context.Context, name string) (*
 	return s.client.Do(ctx, req, nil)
 }
 
-// OptimizeDatabase optimizes a database
+// Optimize optimizes a database
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/optimizeDatabase
-func (s *DatabaseAdminService) OptimizeDatabase(ctx context.Context, name string) (*Response, error) {
-	u := fmt.Sprintf("admin/databases/%s/optimize", name)
+func (s *DatabaseAdminService) Optimize(ctx context.Context, database string) (*Response, error) {
+	u := fmt.Sprintf("admin/databases/%s/optimize", database)
 
 	reqHeaderOpts := &requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -563,11 +568,11 @@ func (s *DatabaseAdminService) OptimizeDatabase(ctx context.Context, name string
 	return s.client.Do(ctx, req, nil)
 }
 
-// RepairDatabase attempts to recover a corrupted database.
+// Repair attempts to recover a corrupted database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/repairDatabase
-func (s *DatabaseAdminService) RepairDatabase(ctx context.Context, name string) (*Response, error) {
-	u := fmt.Sprintf("admin/databases/%s/repair", name)
+func (s *DatabaseAdminService) Repair(ctx context.Context, database string) (*Response, error) {
+	u := fmt.Sprintf("admin/databases/%s/repair", database)
 
 	reqHeaderOpts := &requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -581,10 +586,10 @@ func (s *DatabaseAdminService) RepairDatabase(ctx context.Context, name string) 
 	return s.client.Do(ctx, req, nil)
 }
 
-// RestoreDatabase restores a database backup located at the path on the server
+// Restore restores a database backup located at the path on the server
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/restoreDatabase
-func (s *DatabaseAdminService) RestoreDatabase(ctx context.Context, path string, opts *RestoreDatabaseOptions) (*Response, error) {
+func (s *DatabaseAdminService) Restore(ctx context.Context, path string, opts *RestoreDatabaseOptions) (*Response, error) {
 	u := fmt.Sprintf("admin/restore?from=%s", path)
 	urlWithOptions, err := addOptions(u, opts)
 	if err != nil {
@@ -602,11 +607,11 @@ func (s *DatabaseAdminService) RestoreDatabase(ctx context.Context, path string,
 	return s.client.Do(ctx, req, nil)
 }
 
-// OnlineDatabase onlines a database.
+// Online onlines a database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/onlineDatabase
-func (s *DatabaseAdminService) OnlineDatabase(ctx context.Context, name string) (*Response, error) {
-	u := fmt.Sprintf("admin/databases/%s/online", name)
+func (s *DatabaseAdminService) Online(ctx context.Context, database string) (*Response, error) {
+	u := fmt.Sprintf("admin/databases/%s/online", database)
 
 	reqHeaderOpts := &requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -620,11 +625,11 @@ func (s *DatabaseAdminService) OnlineDatabase(ctx context.Context, name string) 
 	return s.client.Do(ctx, req, nil)
 }
 
-// OfflineDatabase onlines a database.
+// Offline onlines a database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/offlineDatabase
-func (s *DatabaseAdminService) OfflineDatabase(ctx context.Context, name string) (*Response, error) {
-	u := fmt.Sprintf("admin/databases/%s/offline", name)
+func (s *DatabaseAdminService) Offline(ctx context.Context, database string) (*Response, error) {
+	u := fmt.Sprintf("admin/databases/%s/offline", database)
 
 	reqHeaderOpts := &requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -638,10 +643,10 @@ func (s *DatabaseAdminService) OfflineDatabase(ctx context.Context, name string)
 	return s.client.Do(ctx, req, nil)
 }
 
-// GenerateDataModel generates the reasoning model used by this database in various formats
+// DataModel generates the reasoning model used by this database in various formats
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/generateModel
-func (s *DatabaseAdminService) GenerateDataModel(ctx context.Context, database string, opts *GenerateDataModelOptions) (*bytes.Buffer, *Response, error) {
+func (s *DatabaseAdminService) DataModel(ctx context.Context, database string, opts *DataModelOptions) (*bytes.Buffer, *Response, error) {
 	u := fmt.Sprintf("%s/model", database)
 	urlWithOptions, err := addOptions(u, opts)
 	if err != nil {
