@@ -135,36 +135,31 @@ const (
 	QueryResultFormatTSV
 )
 
+var queryResultFormatValues = [11]string{
+	QueryResultFormatUnknown:           "UNKNOWN",
+	QueryResultFormatTrig:              mediaTypeApplicationTrig,
+	QueryResultFormatTurtle:            mediaTypeTextTurtle,
+	QueryResultFormatRDFXML:            mediaTypeApplicationRDFXML,
+	QueryResultFormatNTriples:          mediaTypeApplicationNTriples,
+	QueryResultFormatNQuads:            mediaTypeApplicationNQuads,
+	QueryResultFormatJSONLD:            mediaTypeApplicationJSONLD,
+	QueryResultFormatSparqlResultsJSON: mediaTypeApplicationSparqlResultsJSON,
+	QueryResultFormatSparqlResultsXML:  mediaTypeApplicationSparqlResultsXML,
+	QueryResultFormatCSV:               mediaTypeTextCSV,
+	QueryResultFormatTSV:               mediaTypeTextTSV,
+}
+
 // Valid returns if a given QueryResultFormat is known (valid) or not.
 func (q QueryResultFormat) Valid() bool {
-	return !(q <= QueryResultFormatUnknown || int(q) >= len(queryResultFormatValues()))
+	return !(q <= QueryResultFormatUnknown || int(q) >= len(queryResultFormatValues))
 }
-
-//revive:disable:add-constant
-func queryResultFormatValues() [11]string {
-	return [11]string{
-		QueryResultFormatUnknown:           "UNKNOWN",
-		QueryResultFormatTrig:              mediaTypeApplicationTrig,
-		QueryResultFormatTurtle:            mediaTypeTextTurtle,
-		QueryResultFormatRDFXML:            mediaTypeApplicationRDFXML,
-		QueryResultFormatNTriples:          mediaTypeApplicationNTriples,
-		QueryResultFormatNQuads:            mediaTypeApplicationNQuads,
-		QueryResultFormatJSONLD:            mediaTypeApplicationJSONLD,
-		QueryResultFormatSparqlResultsJSON: mediaTypeApplicationSparqlResultsJSON,
-		QueryResultFormatSparqlResultsXML:  mediaTypeApplicationSparqlResultsXML,
-		QueryResultFormatCSV:               mediaTypeTextCSV,
-		QueryResultFormatTSV:               mediaTypeTextTSV,
-	}
-}
-
-//revive:enable:add-constant
 
 // String will return the string representation of the QueryResultFormat, which is the MIME-type
 func (q QueryResultFormat) String() string {
 	if !q.Valid() {
-		return queryResultFormatValues()[QueryPlanFormatUnknown]
+		return queryResultFormatValues[QueryPlanFormatUnknown]
 	}
-	return queryResultFormatValues()[q]
+	return queryResultFormatValues[q]
 }
 
 // QueryPlanFormat determines the format of the [Stardog query plan].
@@ -180,28 +175,23 @@ const (
 	QueryPlanFormatJSON
 )
 
+var queryPlanFormatValues = [3]string{
+	QueryPlanFormatUnknown: "UNKNOWN",
+	QueryPlanFormatText:    mediaTypePlainText,
+	QueryPlanFormatJSON:    mediaTypeApplicationJSON,
+}
+
 // Valid returns if a given QueryPlanFormat is known (valid) or not.
 func (q QueryPlanFormat) Valid() bool {
-	return !(q <= QueryPlanFormatUnknown || int(q) >= len(queryPlanFormatValues()))
+	return !(q <= QueryPlanFormatUnknown || int(q) >= len(queryPlanFormatValues))
 }
-
-//revive:disable:add-constant
-func queryPlanFormatValues() [3]string {
-	return [3]string{
-		QueryPlanFormatUnknown: "UNKNOWN",
-		QueryPlanFormatText:    mediaTypePlainText,
-		QueryPlanFormatJSON:    mediaTypeApplicationJSON,
-	}
-}
-
-//revive:enable:add-constant
 
 // String will return the string representation of the QueryPlanFormat, which is the MIME-type
 func (q QueryPlanFormat) String() string {
 	if !q.Valid() {
-		return queryPlanFormatValues()[QueryPlanFormatUnknown]
+		return queryPlanFormatValues[QueryPlanFormatUnknown]
 	}
-	return queryPlanFormatValues()[q]
+	return queryPlanFormatValues[q]
 }
 
 // ExplainOptions specifies the optional parameters to the [SPARQLService.Explain] method

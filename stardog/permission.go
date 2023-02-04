@@ -45,37 +45,31 @@ const (
 	PermissionActionAll
 )
 
-// permissionActionValues returns an array mapping each
+// permissionActionValues maps each
 // PermissionAction to its string value
-//
-//revive:disable:add-constant
-func permissionActionValues() [9]string {
-	return [9]string{
-		PermissionActionUnknown: "",
-		PermissionActionRead:    "read",
-		PermissionActionWrite:   "write",
-		PermissionActionCreate:  "create",
-		PermissionActionDelete:  "delete",
-		PermissionActionGrant:   "grant",
-		PermissionActionRevoke:  "revoke",
-		PermissionActionExecute: "execute",
-		PermissionActionAll:     "all",
-	}
+var permissionActionValues = [9]string{
+	PermissionActionUnknown: "",
+	PermissionActionRead:    "read",
+	PermissionActionWrite:   "write",
+	PermissionActionCreate:  "create",
+	PermissionActionDelete:  "delete",
+	PermissionActionGrant:   "grant",
+	PermissionActionRevoke:  "revoke",
+	PermissionActionExecute: "execute",
+	PermissionActionAll:     "all",
 }
-
-//revive:enable:add-constant
 
 // Valid returns if a given PermissionAction is known (valid) or not.
 func (p PermissionAction) Valid() bool {
-	return !(p <= PermissionActionUnknown || int(p) >= len(permissionActionValues()))
+	return !(p <= PermissionActionUnknown || int(p) >= len(permissionActionValues))
 }
 
 // String will return the string representation of the PermissionAction
 func (p PermissionAction) String() string {
 	if !p.Valid() {
-		return permissionActionValues()[PermissionActionUnknown]
+		return permissionActionValues[PermissionActionUnknown]
 	}
-	return permissionActionValues()[p]
+	return permissionActionValues[p]
 }
 
 // MarshalText implements TextMarshaler and is invoked when encoding the PermissionAction to JSON.
@@ -85,8 +79,7 @@ func (p PermissionAction) MarshalText() ([]byte, error) {
 
 // UnmarshalText implements TextUnmarshaler and is invoked when decoding JSON to PermissionAction.
 func (p *PermissionAction) UnmarshalText(text []byte) error {
-	valsArr := permissionActionValues()
-	valsSlice := valsArr[:]
+	valsSlice := permissionActionValues[:]
 	index := indexOf(valsSlice, strings.ToLower(string(text)))
 	*p = PermissionAction(index)
 	return nil
@@ -115,41 +108,35 @@ const (
 	PermissionResourceTypeAll
 )
 
-// permissionResourceTypeValues returns an array mapping each
-// PermissionResourceTypeAction to its string value
-//
-//revive:disable:add-constant
-func permissionResourceTypeValues() [13]string {
-	return [13]string{
-		PermissionResourceTypeUnknown:           "UNKNOWN",
-		PermissionResourceTypeDatabase:          "db",
-		PermissionResourceTypeMetadata:          "metadata",
-		PermissionResourceTypeUser:              "user",
-		PermissionResourceTypeRole:              "role",
-		PermissionResourceTypeNamedGraph:        "named-graph",
-		PermissionResourceTypeVirtualGraph:      "virtual-graph",
-		PermissionResourceTypeDataSource:        "data-source",
-		PermissionResourceTypeServeradmin:       "dbms-admin",
-		PermissionResourceTypeDatabaseAdmin:     "admin",
-		PermissionResourceTypeSensitiveProperty: "sensitive-property",
-		PermissionResourceTypeStoredQuery:       "stored-query",
-		PermissionResourceTypeAll:               "*",
-	}
+// permissionResourceTypeValues maps each PermissionResourceType
+// to its string representation.
+var permissionResourceTypeValues = [13]string{
+	PermissionResourceTypeUnknown:           "UNKNOWN",
+	PermissionResourceTypeDatabase:          "db",
+	PermissionResourceTypeMetadata:          "metadata",
+	PermissionResourceTypeUser:              "user",
+	PermissionResourceTypeRole:              "role",
+	PermissionResourceTypeNamedGraph:        "named-graph",
+	PermissionResourceTypeVirtualGraph:      "virtual-graph",
+	PermissionResourceTypeDataSource:        "data-source",
+	PermissionResourceTypeServeradmin:       "dbms-admin",
+	PermissionResourceTypeDatabaseAdmin:     "admin",
+	PermissionResourceTypeSensitiveProperty: "sensitive-property",
+	PermissionResourceTypeStoredQuery:       "stored-query",
+	PermissionResourceTypeAll:               "*",
 }
-
-//revive:enable:add-constant
 
 // Valid returns if a given PermissionResourceType is known (valid) or not.
 func (p PermissionResourceType) Valid() bool {
-	return !(p <= PermissionResourceTypeUnknown || int(p) >= len(permissionResourceTypeValues()))
+	return !(p <= PermissionResourceTypeUnknown || int(p) >= len(permissionResourceTypeValues))
 }
 
 // String will return the string representation of the PermissionResourceType
 func (p PermissionResourceType) String() string {
 	if !p.Valid() {
-		return permissionResourceTypeValues()[PermissionResourceTypeUnknown]
+		return permissionResourceTypeValues[PermissionResourceTypeUnknown]
 	}
-	return permissionResourceTypeValues()[p]
+	return permissionResourceTypeValues[p]
 }
 
 // MarshalText implements TextMarshaler and is invoked when encoding the PermissionResourceType to JSON.
@@ -159,8 +146,7 @@ func (p PermissionResourceType) MarshalText() ([]byte, error) {
 
 // UnmarshalText implements TextUnmarshaler and is invoked when decoding JSON to PermissionResourceType.
 func (p *PermissionResourceType) UnmarshalText(text []byte) error {
-	valsArr := permissionResourceTypeValues()
-	valsSlice := valsArr[:]
+	valsSlice := permissionResourceTypeValues[:]
 	index := indexOf(valsSlice, strings.ToLower(string(text)))
 	*p = PermissionResourceType(index)
 	return nil

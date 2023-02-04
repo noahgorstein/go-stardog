@@ -37,34 +37,28 @@ const (
 	DataModelFormatGraphQL
 )
 
-// dataModelFormatValues returns an array mapping each
-// DataModelFormat to its string value
-//
-//revive:disable:add-constant
-func dataModelFormatValues() [6]string {
-	return [6]string{
-		DataModelFormatUnknown: "",
-		DataModelFormatText:    "text",
-		DataModelFormatOWL:     "owl",
-		DataModelFormatSHACL:   "shacl",
-		DataModelFormatSQL:     "sql",
-		DataModelFormatGraphQL: "graphql",
-	}
+// dataModelFormatValues maps each DataModelFormat to its 
+// string representation
+var dataModelFormatValues = [6]string{
+	DataModelFormatUnknown: "",
+	DataModelFormatText:    "text",
+	DataModelFormatOWL:     "owl",
+	DataModelFormatSHACL:   "shacl",
+	DataModelFormatSQL:     "sql",
+	DataModelFormatGraphQL: "graphql",
 }
-
-//revive:enable:add-constant
 
 // Valid returns if the DataModelFormat is known (valid) or not.
 func (f DataModelFormat) Valid() bool {
-	return !(f <= DataModelFormatUnknown || int(f) >= len(dataModelFormatValues()))
+	return !(f <= DataModelFormatUnknown || int(f) >= len(dataModelFormatValues))
 }
 
 // String will return the string representation of the DataModelFormat
 func (f DataModelFormat) String() string {
 	if !f.Valid() {
-		return permissionActionValues()[PermissionActionUnknown]
+		return dataModelFormatValues[DataModelFormatUnknown]
 	}
-	return permissionActionValues()[f]
+	return dataModelFormatValues[f]
 }
 
 // ImportNamespacesResponse contains information returned
