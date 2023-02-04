@@ -24,34 +24,29 @@ const (
 	RDFFormatJSONLD
 )
 
+var rdfFormatValues = [7]string{
+	RDFFormatUnknown:  "UNKNOWN",
+	RDFFormatTrig:     mediaTypeApplicationTrig,
+	RDFFormatTurtle:   mediaTypeTextTurtle,
+	RDFFormatRDFXML:   mediaTypeApplicationRDFXML,
+	RDFFormatNTriples: mediaTypeApplicationNTriples,
+	RDFFormatNQuads:   mediaTypeApplicationNQuads,
+	RDFFormatJSONLD:   mediaTypeApplicationJSONLD,
+}
+
 // Valid returns if a given RDFFormat is known (valid) or not.
 func (r RDFFormat) Valid() bool {
-	return !(r <= RDFFormatUnknown || int(r) >= len(rdfFormatValues()))
+	return !(r <= RDFFormatUnknown || int(r) >= len(rdfFormatValues))
 }
-
-//revive:disable:add-constant
-func rdfFormatValues() [7]string {
-	return [7]string{
-		RDFFormatUnknown:  "UNKNOWN",
-		RDFFormatTrig:     mediaTypeApplicationTrig,
-		RDFFormatTurtle:   mediaTypeTextTurtle,
-		RDFFormatRDFXML:   mediaTypeApplicationRDFXML,
-		RDFFormatNTriples: mediaTypeApplicationNTriples,
-		RDFFormatNQuads:   mediaTypeApplicationNQuads,
-		RDFFormatJSONLD:   mediaTypeApplicationJSONLD,
-	}
-}
-
-//revive:enable:add-constant
 
 // String will return the string representation of the RDFFormat, which is the [MIME-type]
 //
 // [MIME-type]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 func (r RDFFormat) String() string {
 	if !r.Valid() {
-		return rdfFormatValues()[RDFFormatUnknown]
+		return rdfFormatValues[RDFFormatUnknown]
 	}
-	return rdfFormatValues()[r]
+	return rdfFormatValues[r]
 }
 
 // helper function to get a string representation of the RDFFormat that [DatabaseAdminService.ExportData]
