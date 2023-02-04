@@ -14,10 +14,10 @@ const (
 
 // compressionValues maps each Compression to its string value
 var compressionValues = [4]string{
-		CompressionUnknown: "",
-		CompressionBZ2:     "BZ2",
-		CompressionZIP:     "ZIP",
-		CompressionGZIP:    "GZIP",
+	CompressionUnknown: "",
+	CompressionBZ2:     "BZ2",
+	CompressionZIP:     "ZIP",
+	CompressionGZIP:    "GZIP",
 }
 
 // Valid returns if a Compression is known (valid) or not.

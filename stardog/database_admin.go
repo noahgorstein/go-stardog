@@ -37,7 +37,7 @@ const (
 	DataModelFormatGraphQL
 )
 
-// dataModelFormatValues maps each DataModelFormat to its 
+// dataModelFormatValues maps each DataModelFormat to its
 // string representation
 var dataModelFormatValues = [6]string{
 	DataModelFormatUnknown: "",
