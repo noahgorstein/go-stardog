@@ -55,11 +55,11 @@ func main() {
 	database, _ := r.ReadString('\n')
 	database = strings.TrimSpace(database)
 
-	opts := &stardog.GenerateDataModelOptions{
+	opts := &stardog.DataModelOptions{
 		OutputFormat: stardog.DataModelFormatSHACL,
 	}
 
-	buf, _, err := client.DatabaseAdmin.GenerateDataModel(context.Background(), database, opts)
+	buf, _, err := client.DatabaseAdmin.DataModel(context.Background(), database, opts)
 	if err != nil {
 		fmt.Println("unable to generate data model")
 		var stardogErr *stardog.ErrorResponse
