@@ -64,7 +64,8 @@ func main() {
 //		log.Fatalf("non-stardog error occurred: %v", err)
 //	}
 
-  _, err = client.DataSource.RefreshMetadata(context.Background(), "postgres", nil)
+  resp, err := client.DataSource.Test(context.Background(), "postgres")
+  fmt.Println(resp.Status)
 	if err != nil {
 		var stardogErr *stardog.ErrorResponse
 		if errors.As(err, &stardogErr) {

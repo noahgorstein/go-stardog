@@ -22,10 +22,22 @@ type DataSource struct {
 	Available bool `json:"available"`
 }
 
-// RefreshDataSourceOptions are optional parameters to the [DataSourceService.RefreshMetadata] method
-type RefreshDataSourceOptions struct {
+// RefreshDataSourceMetadataOptions are optional parameters to the [DataSourceService.RefreshMetadata] method
+type RefreshDataSourceMetadataOptions struct {
 	// Optional table to refresh. Example formats (case-sensitive): catalog.schema.table, schema.table, table
 	Table string `json:"name,omitempty"`
+}
+
+// RefreshDataSourceCountsOptions are optional parameters to the [DataSourceService.RefreshCounts] method
+type RefreshDataSourceCountsOptions struct {
+	// Optional table to refresh. Example formats (case-sensitive): catalog.schema.table, schema.table, table
+	Table string `json:"name,omitempty"`
+}
+
+// DeleteDataSourceOptions are optional parameters to the [DataSourceService.Delete] method
+type DeleteDataSourceOptions struct {
+	// Whether to remove any virtual graphs that use the data source
+	Force bool `url:"force,omitempty"`
 }
 
 // response for ListNames
@@ -175,23 +187,104 @@ func (s *DataSourceService) Update(ctx context.Context, datasource string, opts 
 	return s.client.Do(ctx, req, nil)
 }
 
-// RefreshMetadata clear the saved metadata for a
-// Data Source and reload all its dependent Virtual Graphs with fresh metadata.
+// RefreshMetadata clears the saved metadata for a
+// Data Source and reloads all its dependent Virtual Graphs with fresh metadata.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/refreshMetadata
-func (s *DataSourceService) RefreshMetadata(ctx context.Context, datasource string, opts *RefreshDataSourceOptions) (*Response, error) {
+func (s *DataSourceService) RefreshMetadata(ctx context.Context, datasource string, opts *RefreshDataSourceMetadataOptions) (*Response, error) {
 	u := fmt.Sprintf("admin/data_sources/%s/refresh_metadata", datasource)
 	headerOpts := &requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 	}
 
-  // Stardog expect to be sent at a minimum an empty JSON object if 
-  // no table is specified in the opts
+	// Stardog expect to be sent at a minimum an empty JSON object if
+	// no table is specified in the opts
 	var body interface{} = make(map[string]interface{})
 	if opts != nil {
 		body = opts
-	} 
+	}
 	req, err := s.client.NewRequest(http.MethodPost, u, headerOpts, body)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+// RefreshCounts refreshes the row-count estimates for one or all tables that are accessible to a data source.
+// When a virtual graph is loaded, it queries the data source for approximate table and index sizes.
+// If the size of one or more tables change after the virtual graph is loaded, these estimates become stale,
+// potentially leading to suboptimal query plans.
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/refreshMetadata
+func (s *DataSourceService) RefreshCounts(ctx context.Context, datasource string, opts *RefreshDataSourceCountsOptions) (*Response, error) {
+	u := fmt.Sprintf("admin/data_sources/%s/refresh_counts", datasource)
+	headerOpts := &requestHeaderOptions{
+		ContentType: mediaTypeApplicationJSON,
+	}
+
+	// Stardog expect to be sent at a minimum an empty JSON object if
+	// no table is specified in the opts
+	var body interface{} = make(map[string]interface{})
+	if opts != nil {
+		body = opts
+	}
+	req, err := s.client.NewRequest(http.MethodPost, u, headerOpts, body)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+// Shares shares a private data source. When a virtual graph is created without specifying a data source name, a private data
+// source is created for that, and only that virtual graph. This command makes such a data source available to
+// other virtual graphs, as well as decouples the data source life cycle from the original virtual graph.
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/shareDataSource
+func (s *DataSourceService) Share(ctx context.Context, datasource string) (*Response, error) {
+	u := fmt.Sprintf("admin/data_sources/%s/share", datasource)
+	req, err := s.client.NewRequest(http.MethodPost, u, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+// TestExisting tests an existing data source connection.
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/testDataSource
+func (s *DataSourceService) TestExisting(ctx context.Context, datasource string) (*Response, error) {
+	u := fmt.Sprintf("admin/data_sources/%s/test_data_source", datasource)
+	req, err := s.client.NewRequest(http.MethodPost, u, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+// Online attempts to bring an existing data source connection online. When Stardog restarts, data sources that cannot
+// be loaded will be listed as offline. If Online is successful, all virtual graphs that use the data source
+// will be brought online as well.
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/onlineDataSource
+func (s *DataSourceService) Online(ctx context.Context, datasource string) (*Response, error) {
+	u := fmt.Sprintf("admin/data_sources/%s/online", datasource)
+	req, err := s.client.NewRequest(http.MethodPost, u, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+// Delete deletes a registered data source.
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/deleteDataSource
+func (s *DataSourceService) Delete(ctx context.Context, datasource string, opts *DeleteDataSourceOptions) (*Response, error) {
+	u := fmt.Sprintf("admin/data_sources/%s", datasource)
+  urlWithOpts, err := addOptions(u, opts)
+  if err != nil {
+    return nil, err
+  }
+	req, err := s.client.NewRequest(http.MethodDelete, urlWithOpts, nil, nil)
 	if err != nil {
 		return nil, err
 	}
