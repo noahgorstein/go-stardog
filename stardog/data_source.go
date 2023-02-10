@@ -66,6 +66,17 @@ type updateDataSourceRequest struct {
 	Options map[string]interface{} `json:"options"`
 }
 
+// request for TestNew
+type testNewDataSourceRequest struct {
+	Options map[string]interface{} `json:"options"`
+}
+
+// request for Query
+type queryDataSourceRequest struct {
+	Query   string                 `json:"query"`
+	Options map[string]interface{} `json:"options"`
+}
+
 // ListNames returns the names of all data sources registered in the system
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/listDataSources
@@ -261,6 +272,25 @@ func (s *DataSourceService) TestExisting(ctx context.Context, datasource string)
 	return s.client.Do(ctx, req, nil)
 }
 
+// TestNew tests a connection to a new data source.
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/testDataSource
+func (s *DataSourceService) TestNew(ctx context.Context, opts map[string]interface{}) (*Response, error) {
+	u := "admin/data_sources/test_new_connection"
+	headerOpts := &requestHeaderOptions{
+		ContentType: mediaTypeApplicationJSON,
+	}
+	body := &testNewDataSourceRequest{
+		Options: opts,
+	}
+
+	req, err := s.client.NewRequest(http.MethodPost, u, headerOpts, body)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
 // Online attempts to bring an existing data source connection online. When Stardog restarts, data sources that cannot
 // be loaded will be listed as offline. If Online is successful, all virtual graphs that use the data source
 // will be brought online as well.
@@ -280,13 +310,47 @@ func (s *DataSourceService) Online(ctx context.Context, datasource string) (*Res
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/deleteDataSource
 func (s *DataSourceService) Delete(ctx context.Context, datasource string, opts *DeleteDataSourceOptions) (*Response, error) {
 	u := fmt.Sprintf("admin/data_sources/%s", datasource)
-  urlWithOpts, err := addOptions(u, opts)
-  if err != nil {
-    return nil, err
-  }
+	urlWithOpts, err := addOptions(u, opts)
+	if err != nil {
+		return nil, err
+	}
 	req, err := s.client.NewRequest(http.MethodDelete, urlWithOpts, nil, nil)
 	if err != nil {
 		return nil, err
 	}
 	return s.client.Do(ctx, req, nil)
+}
+
+// Query queries the data source directly with optional data source options.
+//
+// The result format from the endpoint is JSON but its structure is not well defined enough to return a
+// struct since the fields are variable depending on what is being queried.
+//
+// Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/testDataSource
+func (s *DataSourceService) Query(ctx context.Context, datasource string, query string, opts map[string]interface{}) (*map[string]interface{}, *Response, error) {
+	u := fmt.Sprintf("admin/data_sources/%s/query", datasource)
+	headerOpts := &requestHeaderOptions{
+		ContentType: mediaTypeApplicationJSON,
+		Accept:      mediaTypeApplicationJSON,
+	}
+	dsOpts := make(map[string]interface{})
+	if opts != nil {
+		dsOpts = opts
+	}
+
+	body := &queryDataSourceRequest{
+		Query:   query,
+		Options: dsOpts,
+	}
+
+	req, err := s.client.NewRequest(http.MethodPost, u, headerOpts, body)
+	if err != nil {
+		return nil, nil, err
+	}
+	var results map[string]interface{}
+	resp, err := s.client.Do(ctx, req, &results)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &results, resp, err
 }

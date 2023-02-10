@@ -427,6 +427,63 @@ func TestDataSourceService_Online(t *testing.T) {
 	})
 }
 
+func TestDataSourceService_TestExisting(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	dsName := "postgres"
+
+	mux.HandleFunc(fmt.Sprintf("/admin/data_sources/%s/test_data_source", dsName), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "POST")
+		w.WriteHeader(http.StatusNoContent)
+	})
+	ctx := context.Background()
+	_, err := client.DataSource.TestExisting(ctx, dsName)
+	if err != nil {
+		t.Errorf("DataSource.TestExisting returned error: %v", err)
+	}
+
+	const methodName = "TestExisting"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		return client.DataSource.TestExisting(nil, dsName)
+	})
+}
+
+func TestDataSourceService_TestNew(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	opts := map[string]interface{}{
+		"jdbc.url":    "jdbc:postgresql://localhost:5432/employees",
+		"jdbc.driver": "org.postgresql.Driver",
+	}
+
+	mux.HandleFunc("/admin/data_sources/test_new_connection", func(w http.ResponseWriter, r *http.Request) {
+		v := new(testNewDataSourceRequest)
+		json.NewDecoder(r.Body).Decode(v)
+		testMethod(t, r, "POST")
+		testHeader(t, r, "Content-Type", mediaTypeApplicationJSON)
+
+		want := &testNewDataSourceRequest{Options: opts}
+		if !cmp.Equal(v, want) {
+			t.Errorf("Request body = %+v, want %+v", v, want)
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	ctx := context.Background()
+	_, err := client.DataSource.TestNew(ctx, opts)
+	if err != nil {
+		t.Errorf("DataSource.TestNew returned error: %v", err)
+	}
+
+	const methodName = "TestNew"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		return client.DataSource.TestNew(nil, opts)
+	})
+}
+
 func TestDataSourceService_Delete(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
@@ -453,5 +510,85 @@ func TestDataSourceService_Delete(t *testing.T) {
 	})
 	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
 		return client.DataSource.Delete(nil, dsName, opts)
+	})
+}
+
+func TestDataSourceService_Query(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+
+	dsName := "dsName"
+	sqlQuery := "select * from people"
+	opts := map[string]interface{}{
+		"jdbc.url":    "jdbc:postgresql://localhost:5432/employees",
+		"jdbc.driver": "org.postgresql.Driver",
+	}
+	jsonResults := `
+  {
+    "mColumns": {
+      "0": {
+        "mName": "id",
+        "mSize": 11,
+        "mType": "serial"
+      },
+      "1": {
+        "mName": "name",
+        "mSize": 100,
+        "mType": "varchar"
+      }
+    },
+    "mRows": {
+      "0": {
+        "0": "1",
+        "1": "noah"
+      },
+      "1": {
+        "0": "2",
+        "1": "jordan"
+      },
+      "2": {
+        "0": "3",
+        "1": "jack"
+      }
+    }
+  }
+  `
+	mux.HandleFunc(fmt.Sprintf("/admin/data_sources/%s/query", dsName), func(w http.ResponseWriter, r *http.Request) {
+		v := new(queryDataSourceRequest)
+		json.NewDecoder(r.Body).Decode(v)
+		testMethod(t, r, "POST")
+		testHeader(t, r, "Content-Type", mediaTypeApplicationJSON)
+		testHeader(t, r, "Accept", mediaTypeApplicationJSON)
+
+		want := &queryDataSourceRequest{Query: sqlQuery, Options: opts}
+		if !cmp.Equal(v, want) {
+			t.Errorf("Request body = %+v, want %+v", v, want)
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(jsonResults))
+	})
+
+	ctx := context.Background()
+
+	got, _, err := client.DataSource.Query(ctx, dsName, sqlQuery, opts)
+	if err != nil {
+		t.Errorf("DataSource.Query returned error: %v", err)
+	}
+	var wantResultMap map[string]interface{}
+	err = json.Unmarshal([]byte(jsonResults), &wantResultMap)
+	if err != nil {
+		t.Errorf("DataSource.Query returned error: %v", err)
+	}
+	if want := len(wantResultMap); !cmp.Equal(len(*got), want) {
+		t.Errorf("DataSource.Query = %+v, want %+v", got, want)
+	}
+
+	const methodName = "Query"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.DataSource.Query(nil, dsName, sqlQuery, opts)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
 	})
 }
