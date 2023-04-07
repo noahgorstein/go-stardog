@@ -52,29 +52,29 @@ type listDataSourcesResponse struct {
 
 // response for Options
 type dataSourceOptionsResponse struct {
-	Options map[string]interface{} `json:"options"`
+	Options map[string]any `json:"options"`
 }
 
 // request for Add
 type addDataSourceRequest struct {
-	Name    string                 `json:"name"`
-	Options map[string]interface{} `json:"options"`
+	Name    string         `json:"name"`
+	Options map[string]any `json:"options"`
 }
 
 // request for Update
 type updateDataSourceRequest struct {
-	Options map[string]interface{} `json:"options"`
+	Options map[string]any `json:"options"`
 }
 
 // request for TestNew
 type testNewDataSourceRequest struct {
-	Options map[string]interface{} `json:"options"`
+	Options map[string]any `json:"options"`
 }
 
 // request for Query
 type queryDataSourceRequest struct {
-	Query   string                 `json:"query"`
-	Options map[string]interface{} `json:"options"`
+	Query   string         `json:"query"`
+	Options map[string]any `json:"options"`
 }
 
 // ListNames returns the names of all data sources registered in the system
@@ -144,7 +144,7 @@ func (s *DataSourceService) IsAvailable(ctx context.Context, datasource string) 
 // Options returns the all set options for the given data source
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/getDataSourceOptions
-func (s *DataSourceService) Options(ctx context.Context, datasource string) (map[string]interface{}, *Response, error) {
+func (s *DataSourceService) Options(ctx context.Context, datasource string) (map[string]any, *Response, error) {
 	u := fmt.Sprintf("admin/data_sources/%s/options", datasource)
 	headerOpts := &requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -164,7 +164,7 @@ func (s *DataSourceService) Options(ctx context.Context, datasource string) (map
 // Add adds a new data source to the system
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/addDataSource
-func (s *DataSourceService) Add(ctx context.Context, name string, opts map[string]interface{}) (*Response, error) {
+func (s *DataSourceService) Add(ctx context.Context, name string, opts map[string]any) (*Response, error) {
 	u := "admin/data_sources"
 	headerOpts := &requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
@@ -183,7 +183,7 @@ func (s *DataSourceService) Add(ctx context.Context, name string, opts map[strin
 // Update updates an existing data source.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/updateDataSource
-func (s *DataSourceService) Update(ctx context.Context, datasource string, opts map[string]interface{}) (*Response, error) {
+func (s *DataSourceService) Update(ctx context.Context, datasource string, opts map[string]any) (*Response, error) {
 	u := fmt.Sprintf("admin/data_sources/%s", datasource)
 	headerOpts := &requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
@@ -210,7 +210,7 @@ func (s *DataSourceService) RefreshMetadata(ctx context.Context, datasource stri
 
 	// Stardog expect to be sent at a minimum an empty JSON object if
 	// no table is specified in the opts
-	var body interface{} = make(map[string]interface{})
+	var body any = make(map[string]any)
 	if opts != nil {
 		body = opts
 	}
@@ -235,7 +235,7 @@ func (s *DataSourceService) RefreshCounts(ctx context.Context, datasource string
 
 	// Stardog expect to be sent at a minimum an empty JSON object if
 	// no table is specified in the opts
-	var body interface{} = make(map[string]interface{})
+	var body any = make(map[string]any)
 	if opts != nil {
 		body = opts
 	}
@@ -275,7 +275,7 @@ func (s *DataSourceService) TestExisting(ctx context.Context, datasource string)
 // TestNew tests a connection to a new data source.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/testDataSource
-func (s *DataSourceService) TestNew(ctx context.Context, opts map[string]interface{}) (*Response, error) {
+func (s *DataSourceService) TestNew(ctx context.Context, opts map[string]any) (*Response, error) {
 	u := "admin/data_sources/test_new_connection"
 	headerOpts := &requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
@@ -327,13 +327,13 @@ func (s *DataSourceService) Delete(ctx context.Context, datasource string, opts 
 // struct since the fields are variable depending on what is being queried.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/Data-Sources/operation/testDataSource
-func (s *DataSourceService) Query(ctx context.Context, datasource string, query string, opts map[string]interface{}) (*map[string]interface{}, *Response, error) {
+func (s *DataSourceService) Query(ctx context.Context, datasource string, query string, opts map[string]any) (*map[string]any, *Response, error) {
 	u := fmt.Sprintf("admin/data_sources/%s/query", datasource)
 	headerOpts := &requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 		Accept:      mediaTypeApplicationJSON,
 	}
-	dsOpts := make(map[string]interface{})
+	dsOpts := make(map[string]any)
 	if opts != nil {
 		dsOpts = opts
 	}
@@ -347,7 +347,7 @@ func (s *DataSourceService) Query(ctx context.Context, datasource string, query 
 	if err != nil {
 		return nil, nil, err
 	}
-	var results map[string]interface{}
+	var results map[string]any
 	resp, err := s.client.Do(ctx, req, &results)
 	if err != nil {
 		return nil, resp, err

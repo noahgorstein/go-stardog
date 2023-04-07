@@ -179,7 +179,7 @@ type listDatabasesResponse struct {
 // Stardog requires for datbase creation
 type createDatabaseRequest struct {
 	Name         string                      `json:"dbname"`
-	Options      map[string]interface{}      `json:"options"`
+	Options      map[string]any              `json:"options"`
 	Files        []createDatabaseRequestFile `json:"files"`
 	CopyToServer bool                        `json:"copyToServer"`
 }
@@ -197,14 +197,14 @@ type createDatabaseResponse struct {
 // Metadata returns the value of specific metadata options for a database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/getDatabaseOptions
-func (s *DatabaseAdminService) Metadata(ctx context.Context, database string, opts []string) (map[string]interface{}, *Response, error) {
+func (s *DatabaseAdminService) Metadata(ctx context.Context, database string, opts []string) (map[string]any, *Response, error) {
 	u := fmt.Sprintf("admin/databases/%s/options", database)
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
 		Accept:      mediaTypeApplicationJSON,
 	}
 
-	optionMap := map[string]interface{}{}
+	optionMap := map[string]any{}
 	for _, opt := range opts {
 		optionMap[opt] = ""
 	}
@@ -214,7 +214,7 @@ func (s *DatabaseAdminService) Metadata(ctx context.Context, database string, op
 		return nil, nil, err
 	}
 
-	var data map[string]interface{}
+	var data map[string]any
 	resp, err := s.client.Do(ctx, req, &data)
 	if err != nil {
 		return nil, resp, err
@@ -225,7 +225,7 @@ func (s *DatabaseAdminService) Metadata(ctx context.Context, database string, op
 // SetMetadata sets the value of specific configuration options (a.k.a. metadata) for a database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/setDatabaseOption
-func (s *DatabaseAdminService) SetMetadata(ctx context.Context, database string, opts map[string]interface{}) (*Response, error) {
+func (s *DatabaseAdminService) SetMetadata(ctx context.Context, database string, opts map[string]any) (*Response, error) {
 	u := fmt.Sprintf("admin/databases/%s/options", database)
 	headerOpts := requestHeaderOptions{
 		ContentType: mediaTypeApplicationJSON,
@@ -248,7 +248,7 @@ func (s *DatabaseAdminService) SetMetadata(ctx context.Context, database string,
 // and their set values for a database.
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/getAllDatabaseOptions
-func (s *DatabaseAdminService) AllMetadata(ctx context.Context, database string) (map[string]interface{}, *Response, error) {
+func (s *DatabaseAdminService) AllMetadata(ctx context.Context, database string) (map[string]any, *Response, error) {
 	u := fmt.Sprintf("admin/databases/%s/options", database)
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -258,7 +258,7 @@ func (s *DatabaseAdminService) AllMetadata(ctx context.Context, database string)
 		return nil, nil, err
 	}
 
-	var data map[string]interface{}
+	var data map[string]any
 	resp, err := s.client.Do(ctx, req, &data)
 	if err != nil {
 		return nil, resp, err
@@ -269,7 +269,7 @@ func (s *DatabaseAdminService) AllMetadata(ctx context.Context, database string)
 // ListWithMetadata returns all databases with their database configuration options (a.k.a. metadata)
 //
 // Stardog API: https://stardog-union.github.io/http-docs/#tag/DB-Admin/operation/listDatabasesWithOptions
-func (s *DatabaseAdminService) ListWithMetadata(ctx context.Context) ([]map[string]interface{}, *Response, error) {
+func (s *DatabaseAdminService) ListWithMetadata(ctx context.Context) ([]map[string]any, *Response, error) {
 	u := "admin/databases/options"
 	headerOpts := requestHeaderOptions{
 		Accept: mediaTypeApplicationJSON,
@@ -472,7 +472,7 @@ func newCreateDatabaseRequestBody(name string, opts *CreateDatabaseOptions) (*by
 		// initialize Files and Options to make sure [], {} respectively instead of null
 		// is in the JSON request sent to Stardog if no Files or Options
 		Files:   make([]createDatabaseRequestFile, 0),
-		Options: make(map[string]interface{}),
+		Options: make(map[string]any),
 	}
 
 	if opts != nil {

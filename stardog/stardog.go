@@ -107,7 +107,7 @@ func NewClient(serverURL string, httpClient *http.Client) (*Client, error) {
 	return c, nil
 }
 
-func (c *Client) NewMultipartFormDataRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
+func (c *Client) NewMultipartFormDataRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body any) (*http.Request, error) {
 	if !strings.HasSuffix(c.baseURL.Path, forwardSlash) {
 		//revive:disable-next-line:error-strings
 		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.baseURL)
@@ -135,7 +135,7 @@ func (c *Client) NewMultipartFormDataRequest(method string, urlStr string, heade
 	return nil, errors.New("Missing 'Content-Type multipart/form-data' header")
 }
 
-func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body interface{}) (*http.Request, error) {
+func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHeaderOptions, body any) (*http.Request, error) {
 	if !strings.HasSuffix(c.baseURL.Path, forwardSlash) {
 		//revive:disable-next-line:error-strings
 		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.baseURL)
@@ -240,7 +240,7 @@ func (c *Client) BareDo(ctx context.Context, req *http.Request) (*Response, erro
 //
 // The provided ctx must be non-nil, if it is nil an error is returned. If it
 // is canceled or times out, ctx.Err() will be returned.
-func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Response, error) {
+func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*Response, error) {
 	resp, err := c.BareDo(ctx, req)
 	if err != nil {
 		return resp, err
@@ -265,7 +265,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 
 // addOptions adds the parameters in opts as URL query parameters to s. opts
 // must be a struct whose fields may contain "url" tags.
-func addOptions(s string, opts interface{}) (string, error) {
+func addOptions(s string, opts any) (string, error) {
 	v := reflect.ValueOf(opts)
 	if v.Kind() == reflect.Ptr && v.IsNil() {
 		return s, nil
