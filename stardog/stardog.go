@@ -34,7 +34,7 @@ type Client struct {
 
 	common service
 
-	//Services for talking to different parts of the Stardog API
+	// Services for talking to different parts of the Stardog API
 	DataSource    *DataSourceService
 	DatabaseAdmin *DatabaseAdminService
 	Role          *RoleService

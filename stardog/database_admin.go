@@ -96,15 +96,15 @@ type Namespace struct {
 
 // DatabaseOptionDetails represents a database configuration option's details.
 type DatabaseOptionDetails struct {
-	Name              string      `json:"name"`
-	Type              string      `json:"type"`
-	Server            bool        `json:"server"`
-	Mutable           bool        `json:"mutable"`
-	MutableWhenOnline bool        `json:"mutableWhenOnline"`
-	Category          string      `json:"category"`
-	Label             string      `json:"label"`
-	Description       string      `json:"description"`
-	DefaultValue      interface{} `json:"defaultValue"`
+	Name              string `json:"name"`
+	Type              string `json:"type"`
+	Server            bool   `json:"server"`
+	Mutable           bool   `json:"mutable"`
+	MutableWhenOnline bool   `json:"mutableWhenOnline"`
+	Category          string `json:"category"`
+	Label             string `json:"label"`
+	Description       string `json:"description"`
+	DefaultValue      any    `json:"defaultValue"`
 }
 
 // CreateDatabaseOptions specifies the optional parameters to the [DatabaseAdminService.CreateDatabase] method.
@@ -112,7 +112,7 @@ type CreateDatabaseOptions struct {
 	// The data to be bulk-loaded to the database at creation time
 	Datasets []Dataset
 	// Database configuration options
-	DatabaseOptions map[string]interface{}
+	DatabaseOptions map[string]any
 	// Whether to send the file contents to the server. Use if data exists client-side.
 	CopyToServer bool
 }
@@ -167,7 +167,7 @@ type databaseNamespacesResponse struct {
 
 // response for ListWithMetadata
 type listDatabasesWithMetadataResponse struct {
-	Databases []map[string]interface{} `json:"databases"`
+	Databases []map[string]any `json:"databases"`
 }
 
 // response for List
