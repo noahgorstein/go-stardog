@@ -11,6 +11,38 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func TestUserService_WhoAmI(t *testing.T) {
+	client, mux, _, teardown := setup()
+	defer teardown()
+	responseString := "frodo"
+	want := newString(responseString)
+
+	mux.HandleFunc("/admin/status/whoami", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testHeader(t, r, "Accept", mediaTypePlainText)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(responseString))
+	})
+
+	ctx := context.Background()
+	got, _, err := client.User.WhoAmI(ctx)
+	if err != nil {
+		t.Errorf("User.WhoAmI returned error: %v", err)
+	}
+	if !cmp.Equal(got, want) {
+		t.Errorf("User.WhoAmI = %+v, want %+v", got, want)
+	}
+
+	const methodName = "WhoAmI"
+	testNewRequestAndDoFailure(t, methodName, client, func() (*Response, error) {
+		got, resp, err := client.User.WhoAmI(nil)
+		if got != nil {
+			t.Errorf("testNewRequestAndDoFailure %v = %#v, want nil", methodName, got)
+		}
+		return resp, err
+	})
+}
+
 func TestUserService_ListNames(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()

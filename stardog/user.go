@@ -1,6 +1,7 @@
 package stardog
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -73,6 +74,25 @@ type assignRoleRequest struct {
 // request for OverwriteRoles
 type overwriteRolesRequest struct {
 	Roles []string `json:"roles"`
+}
+
+// WhoAmI returns the authenticated user's username
+func (s *UserService) WhoAmI(ctx context.Context) (*string, *Response, error) {
+	u := "admin/status/whoami"
+	headerOpts := requestHeaderOptions{
+		Accept: mediaTypePlainText,
+	}
+	req, err := s.client.NewRequest(http.MethodGet, u, &headerOpts, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	var buf bytes.Buffer
+	resp, err := s.client.Do(ctx, req, &buf)
+	if err != nil {
+		return nil, resp, err
+	}
+	username := buf.String()
+	return &username, resp, nil
 }
 
 // ListNames returns the name of all users in the system
