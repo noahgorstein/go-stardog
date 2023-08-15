@@ -191,6 +191,9 @@ func (c *Client) NewRequest(method string, urlStr string, headerOpts *requestHea
 // Response is a Stardog API response. This wraps the standard http.Response
 type Response struct {
 	*http.Response
+
+	// the raw response body
+	RawBody []byte
 }
 
 // newResponse creates a new Response for the provided http.Response.
@@ -247,12 +250,17 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*Response, e
 	}
 	defer resp.Body.Close()
 
+	rawBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp, err
+	}
+	resp.RawBody = rawBody
 	switch v := v.(type) {
 	case nil:
 	case io.Writer:
-		_, err = io.Copy(v, resp.Body)
+		_, err = io.Copy(v, bytes.NewReader(rawBody))
 	default:
-		decErr := json.NewDecoder(resp.Body).Decode(v)
+		decErr := json.NewDecoder(bytes.NewReader(rawBody)).Decode(v)
 		if decErr == io.EOF {
 			decErr = nil // ignore EOF errors caused by empty response body
 		}
