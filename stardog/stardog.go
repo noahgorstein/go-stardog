@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -251,7 +250,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*Response, e
 	}
 	defer resp.Body.Close()
 
-	rawBody, err := ioutil.ReadAll(resp.Body)
+	rawBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return resp, err
 	}
